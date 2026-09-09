@@ -1,0 +1,31 @@
+{
+	"name": "astro-decap-github-connect",
+	"private": true,
+	"description": "Local Decap stopgap — Zod schema owner + Astro integration",
+	"packageManager": "bun@1.3.12",
+	"workspaces": {
+		"packages": [
+			"packages/zod-decap-local",
+			"packages/fixture"
+		],
+		"catalog": {
+			"typescript": "^5.9.0",
+			"zod": "^4.1.5",
+			"yaml": "^2.8.0",
+			"astro": "^5.13.0"
+		}
+	},
+	"scripts": {
+		"dev": "bun run --filter fixture dev",
+		"build": "bun run --filter fixture build",
+		"test": "bun run --filter zod-decap-local test",
+		"check": "bun run --filter zod-decap-local check && bun run --filter fixture codegen:check",
+		"lint": "biome check .",
+		"format": "biome check --write ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.0",
+		"@types/node": "^24.3.0",
+		"typescript": "catalog:"
+	}
+}

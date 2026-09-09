@@ -1,0 +1,54 @@
+---
+import { getCollection, render } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+export async function getStaticPaths() {
+  const pages = await getCollection("pages");
+  return pages.map((page) => ({
+    params: { slug: page.id },
+    props: { page },
+  }));
+}
+
+const { page } = Astro.props;
+const { Content } = await render(page);
+---
+
+<BaseLayout title={page.data.title}>
+  <article>
+    <header>
+      <h1>{page.data.title}</h1>
+      {
+        page.data.description && (
+          <p class="desc">{page.data.description}</p>
+        )
+      }
+    </header>
+    <div class="body">
+      <Content />
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  article {
+    max-width: 40rem;
+    padding: 2rem 0 4rem;
+  }
+  h1 {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  .desc {
+    color: var(--muted);
+    margin: 0;
+  }
+  .body {
+    margin-top: 1.5rem;
+    line-height: 1.65;
+  }
+  .body :global(p) {
+    margin: 0 0 1rem;
+  }
+</style>

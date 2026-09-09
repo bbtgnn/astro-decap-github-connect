@@ -1,0 +1,22 @@
+{
+	"name": "fixture",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Astro dogfood host for zod-decap-local",
+	"scripts": {
+		"dev": "astro dev --host 127.0.0.1 --port 4321",
+		"build": "astro build",
+		"preview": "astro preview",
+		"codegen:check": "bun ../../packages/zod-decap-local/src/cli.ts --check --root . --from ./src/lib/schemas.ts"
+	},
+	"dependencies": {
+		"astro": "catalog:",
+		"zod": "catalog:",
+		"zod-decap-local": "workspace:*"
+	},
+	"devDependencies": {
+		"decap-server": "3.11.0",
+		"typescript": "catalog:"
+	}
+}

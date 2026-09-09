@@ -1,0 +1,92 @@
+---
+import { getCollection, getEntry, render } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("posts");
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const author = post.data.author
+  ? await getEntry("authors", post.data.author)
+  : undefined;
+---
+
+<BaseLayout title={post.data.title}>
+  <article>
+    <header>
+      <h1>{post.data.title}</h1>
+      {
+        post.data.description && (
+          <p class="desc">{post.data.description}</p>
+        )
+      }
+      <p class="meta">
+        <time datetime={post.data.pubDate.toISOString()}>
+          {post.data.pubDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </time>
+        {
+          author && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>{author.data.name}</span>
+            </>
+          )
+        }
+      </p>
+    </header>
+    {
+      post.data.heroImage && (
+        <img src={post.data.heroImage} alt="" class="hero" />
+      )
+    }
+    <div class="body">
+      <Content />
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  article {
+    max-width: 40rem;
+    padding: 2rem 0 4rem;
+  }
+  h1 {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  .desc {
+    color: var(--muted);
+    margin: 0 0 0.5rem;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+  .hero {
+    width: 100%;
+    margin: 1.5rem 0;
+    display: block;
+  }
+  .body {
+    margin-top: 1.5rem;
+    line-height: 1.65;
+  }
+  .body :global(p) {
+    margin: 0 0 1rem;
+  }
+</style>

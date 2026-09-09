@@ -1,0 +1,63 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Home">
+<main>
+  <header class="hero">
+    <p class="brand">astro-decap-github-connect</p>
+    <h1>Editorial stopgap (local)</h1>
+    <p class="lede">
+      Zod owns the schema. Decap writes the working tree via
+      <code>local_backend</code>. Astro loads files with <code>glob()</code>.
+    </p>
+    <p class="cta">
+      <a href="/admin">Open Decap admin</a>
+      <a href="/posts/">Posts</a>
+      <a href="/authors/">Authors</a>
+      <a href="/pages/">Pages</a>
+    </p>
+  </header>
+</main>
+</BaseLayout>
+
+<style>
+  .hero {
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.75rem;
+    max-width: 40rem;
+  }
+  .brand {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    letter-spacing: -0.03em;
+    margin: 0;
+    color: var(--ink);
+  }
+  h1 {
+    font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+    font-weight: 500;
+    margin: 0;
+    color: var(--muted);
+  }
+  .lede {
+    margin: 0;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .cta a {
+    color: var(--accent);
+  }
+  code {
+    font-size: 0.9em;
+  }
+</style>

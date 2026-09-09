@@ -1,0 +1,49 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const authors = (await getCollection("authors")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+---
+
+<BaseLayout title="Authors">
+  <main>
+    <h1>Authors</h1>
+    <ul>
+      {
+        authors.map((author) => (
+          <li>
+            <strong>{author.data.name}</strong>
+            <span class="role">{author.data.role}</span>
+            {author.data.bio && <p>{author.data.bio}</p>}
+          </li>
+        ))
+      }
+    </ul>
+  </main>
+</BaseLayout>
+
+<style>
+  main {
+    max-width: 40rem;
+    padding: 2rem 0;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .role {
+    margin-left: 0.5rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  p {
+    margin: 0.35rem 0 0;
+    color: var(--ink);
+  }
+</style>

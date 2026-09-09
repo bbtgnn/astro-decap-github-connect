@@ -1,0 +1,128 @@
+# GENERATED FILE — do not hand-edit.
+# Schema owner: src/lib/schemas.ts.
+# Regenerate: astro dev/build (zodDecap integration) or zod-decap-local CLI
+# Dev: local_backend + decap-server (started by the Astro integration)
+local_backend: true
+backend:
+  name: git-gateway
+media_folder: public/images
+public_folder: /images
+collections:
+  - name: authors
+    label: Authors
+    folder: src/content/authors
+    create: true
+    extension: yml
+    format: yaml
+    fields:
+      - name: name
+        label: Name
+        widget: string
+      - name: role
+        label: Role
+        widget: select
+        default: writer
+        options:
+          - editor
+          - writer
+          - guest
+      - name: bio
+        label: Bio
+        widget: string
+        required: false
+      - name: avatar
+        label: Avatar
+        widget: image
+        required: false
+      - name: order
+        label: Sort order
+        widget: number
+        default: 0
+      - name: social
+        label: Social
+        widget: object
+        required: false
+        fields:
+          - name: website
+            label: Website
+            widget: string
+            required: false
+          - name: bluesky
+            label: Bluesky
+            widget: string
+            required: false
+  - name: posts
+    label: Blog Posts
+    folder: src/content/posts
+    create: true
+    extension: md
+    format: frontmatter
+    fields:
+      - name: title
+        label: Title
+        widget: string
+      - name: description
+        label: Description
+        widget: string
+        required: false
+      - name: pubDate
+        label: Publish Date
+        widget: datetime
+      - name: draft
+        label: Draft
+        widget: boolean
+        default: false
+      - name: heroImage
+        label: Hero Image
+        widget: image
+        required: false
+      - name: author
+        label: Author
+        widget: relation
+        required: false
+        collection: authors
+        value_field: "{{slug}}"
+        search_fields:
+          - name
+        display_fields:
+          - name
+      - name: tags
+        label: Tags
+        widget: list
+        default: []
+        field:
+          name: tag
+          label: Tag
+          widget: string
+      - name: status
+        label: Status
+        widget: select
+        default: draft
+        options:
+          - draft
+          - published
+          - archived
+      - name: body
+        label: Body
+        widget: markdown
+  - name: pages
+    label: Pages
+    folder: src/content/pages
+    create: true
+    extension: md
+    format: frontmatter
+    fields:
+      - name: title
+        label: Title
+        widget: string
+      - name: description
+        label: Description
+        widget: string
+        required: false
+      - name: draft
+        label: Draft
+        widget: boolean
+        default: false
+      - name: body
+        label: Body
+        widget: markdown

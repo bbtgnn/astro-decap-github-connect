@@ -1,0 +1,68 @@
+---
+interface Props {
+  title?: string;
+}
+const { title = "astro-decap-github-connect" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="shell">
+      <slot />
+    </div>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --ink: #1a2418;
+    --muted: #5c6b58;
+    --accent: #2f6f4e;
+    --bg0: #e8f0e4;
+    --bg1: #c5d9c0;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Source Sans 3", system-ui, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background:
+      radial-gradient(ellipse 80% 50% at 10% 0%, #d4e8ce 0%, transparent 55%),
+      radial-gradient(ellipse 60% 40% at 90% 20%, #b8d0c8 0%, transparent 50%),
+      linear-gradient(165deg, var(--bg0), var(--bg1));
+    min-height: 100%;
+    color: var(--ink);
+    font-family: var(--font-body);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  .shell {
+    width: min(52rem, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 1.5rem 0 3rem;
+  }
+
+  a {
+    text-underline-offset: 0.15em;
+  }
+</style>

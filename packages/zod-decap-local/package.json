@@ -1,0 +1,32 @@
+{
+	"name": "zod-decap-local",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Zod → Decap config codegen + local Astro integration (stopgap)",
+	"exports": {
+		".": "./src/index.ts",
+		"./astro": "./src/astro.ts",
+		"./admin": "./src/admin.astro"
+	},
+	"bin": {
+		"zod-decap-local": "./src/cli.ts"
+	},
+	"scripts": {
+		"test": "bun test src",
+		"check": "tsc -p ."
+	},
+	"dependencies": {
+		"yaml": "catalog:"
+	},
+	"peerDependencies": {
+		"astro": "^5.13.0",
+		"decap-server": "3.11.0",
+		"zod": "^4.1.5"
+	},
+	"devDependencies": {
+		"astro": "catalog:",
+		"typescript": "catalog:",
+		"zod": "catalog:"
+	}
+}

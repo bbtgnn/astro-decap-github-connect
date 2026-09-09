@@ -1,0 +1,2 @@
+# Keep so Decap media_folder / public_folder resolve.
+# Upload images via Decap admin; they land here as /images/<file>.
