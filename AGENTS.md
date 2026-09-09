@@ -30,3 +30,5 @@ Fixture pins port **4321**; if busy, Astro takes the next free port — open `/a
 ## Prove the loop
 
 `bun run dev` → edit in `/admin` → file changes under `packages/fixture/src/content/` → site shows content via `glob()`.
+
+CI can publish fixture `dist/` to GitHub Pages; editorial remains local-only.

@@ -10,11 +10,15 @@ export async function getStaticPaths() {
   }));
 }
 
+const base = import.meta.env.BASE_URL;
 const { post } = Astro.props;
 const { Content } = await render(post);
 const author = post.data.author
   ? await getEntry("authors", post.data.author)
   : undefined;
+const heroSrc = post.data.heroImage?.startsWith("/")
+  ? `${base}${post.data.heroImage.slice(1)}`
+  : post.data.heroImage;
 ---
 
 <BaseLayout title={post.data.title}>
@@ -45,8 +49,8 @@ const author = post.data.author
       </p>
     </header>
     {
-      post.data.heroImage && (
-        <img src={post.data.heroImage} alt="" class="hero" />
+      heroSrc && (
+        <img src={heroSrc} alt="" class="hero" />
       )
     }
     <div class="body">

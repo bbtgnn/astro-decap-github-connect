@@ -67,7 +67,18 @@ export default defineConfig({
 
 ## Deploy
 
-Static `dist/` is fine for the public site. **Do not expect `/admin` editing on a static host** — Decap local proxy only works next to `decap-server`.
+CI (`.github/workflows/deploy.yml`) builds the fixture and, on `main`, publishes `packages/fixture/dist` to **GitHub Pages** (project site: `https://<owner>.github.io/<repo>/`).
+
+Build env (set in the workflow):
+
+- `PUBLIC_SITE_URL` — canonical site URL
+- `PUBLIC_BASE_PATH` — Astro `base` (e.g. `/<repo>` for project Pages)
+
+**Admin stays local.** A static host may serve `/admin` assets, but Decap write-back needs `decap-server` next to the working tree — use `bun run dev` for editorial.
+
+Nav links and frontmatter `heroImage` paths respect `base`. Markdown body images that use root-absolute `/images/...` still resolve from the host root (prefer a custom domain, or keep media relative, if you rely on project-site subpaths).
+
+After the first successful deploy, set the repo Pages source to **GitHub Actions** (Settings → Pages).
 
 ## Rules
 

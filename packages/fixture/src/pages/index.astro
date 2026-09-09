@@ -1,5 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+
+const base = import.meta.env.BASE_URL;
 ---
 
 <BaseLayout title="Home">
@@ -12,10 +14,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       <code>local_backend</code>. Astro loads files with <code>glob()</code>.
     </p>
     <p class="cta">
-      <a href="/admin">Open Decap admin</a>
-      <a href="/posts/">Posts</a>
-      <a href="/authors/">Authors</a>
-      <a href="/pages/">Pages</a>
+      <a href={`${base}admin`}>Open Decap admin</a>
+      <a href={`${base}posts/`}>Posts</a>
+      <a href={`${base}authors/`}>Authors</a>
+      <a href={`${base}pages/`}>Pages</a>
     </p>
   </header>
 </main>

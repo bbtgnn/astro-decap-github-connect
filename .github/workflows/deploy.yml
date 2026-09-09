@@ -6,6 +6,17 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Project Pages: https://<owner>.github.io/<repo>/
+# Editorial /admin stays local (decap-server); only the static site is published.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,7 +30,20 @@ jobs:
       - run: bun run test
       - run: bun run check
       - run: bun run build
-      - uses: actions/upload-artifact@v4
+        env:
+          PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+      - uses: actions/upload-pages-artifact@v3
         with:
-          name: dist
           path: packages/fixture/dist
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

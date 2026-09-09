@@ -2,6 +2,7 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
+const base = import.meta.env.BASE_URL;
 const pages = (await getCollection("pages")).filter((p) => !p.data.draft);
 ---
 
@@ -12,7 +13,7 @@ const pages = (await getCollection("pages")).filter((p) => !p.data.draft);
       {
         pages.map((page) => (
           <li>
-            <a href={`/pages/${page.id}/`}>{page.data.title}</a>
+            <a href={`${base}pages/${page.id}/`}>{page.data.title}</a>
             {page.data.description && (
               <span class="desc">{page.data.description}</span>
             )}
