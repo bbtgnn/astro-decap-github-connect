@@ -5,7 +5,7 @@ import {
 	collectionFromSchema,
 	fieldFromZod,
 } from "./codegen";
-import { boolean, object, text } from "./fields";
+import { boolean, object, relation, text } from "./fields";
 
 describe("fieldFromZod", () => {
 	test("maps string + label meta to Decap string widget", () => {
@@ -30,6 +30,60 @@ describe("fieldFromZod", () => {
 		);
 		expect(field.widget).toBe("boolean");
 		expect(field.default).toBe(false);
+	});
+
+	test("maps relation helper to Decap relation widget options", () => {
+		const field = fieldFromZod(
+			"author",
+			relation("authors", {
+				label: "Author",
+				searchFields: ["name"],
+				displayFields: ["name"],
+			}).optional(),
+		);
+		expect(field).toEqual({
+			name: "author",
+			label: "Author",
+			widget: "relation",
+			required: false,
+			collection: "authors",
+			value_field: "{{slug}}",
+			search_fields: ["name"],
+			display_fields: ["name"],
+		});
+	});
+
+	test("maps nested object to Decap object widget with child fields", () => {
+		const field = fieldFromZod(
+			"social",
+			object(
+				{
+					website: text({ label: "Website" }).optional(),
+					bluesky: text({ label: "Bluesky" }).optional(),
+				},
+				{ label: "Social" },
+			).optional(),
+		);
+		expect(field).toEqual({
+			name: "social",
+			label: "Social",
+			widget: "object",
+			required: false,
+			fields: [
+				{
+					name: "website",
+					label: "Website",
+					widget: "string",
+					required: false,
+				},
+				{
+					name: "bluesky",
+					label: "Bluesky",
+					widget: "string",
+					required: false,
+				},
+			],
+		});
 	});
 });
 
