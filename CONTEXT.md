@@ -17,7 +17,7 @@ One-way Zod → `public/admin/config.yml` inside `zod-decap-local` (`buildDecapC
 _Avoid_: bidirectional sync, hand-maintained YAML
 
 **Astro integration**:
-`zodDecap({ collections })` writes config, injects `/admin`, spawns `decap-server` in `astro dev`.
+`zodDecap({ collections })` writes config, injects `/admin`, resolves/spawns pinned `decap-server@3.11.0` in `astro dev`, optional `watchSchemas` regen.
 _Avoid_: fat CMS platform features
 
 **Content contract**:

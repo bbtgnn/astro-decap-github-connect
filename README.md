@@ -30,9 +30,13 @@ Open:
 - Site: http://127.0.0.1:4321
 - Admin: http://127.0.0.1:4321/admin
 
+The fixture pins `--port 4321`. If that port is already taken, Astro binds the next free port (e.g. 4322) — use that host:port for both the site and `/admin`. The integration logs the admin URL on startup (and calls out when it had to leave 4321).
+
 `bun run dev` runs the fixture; the integration writes config and starts `decap-server`. Edits save into the working tree — no login.
 
-> `decap-server` is pinned to `3.11.0` (newer publishes use pnpm `catalog:` deps that break non-pnpm installs).
+> `decap-server` is pinned to `3.11.0` (newer publishes use pnpm `catalog:` deps that break non-pnpm installs). Install with `bun add -d decap-server@3.11.0` in the Astro app; the integration errors clearly if it is missing.
+
+Optional: `watchSchemas: true` (with `schemaOwnerHint` pointing at the schemas module) regenerates `config.yml` on schema edits without waiting for a full Astro restart.
 
 ## Consumer sketch
 
@@ -43,7 +47,13 @@ import { zodDecap } from "zod-decap-local/astro";
 import { collectionSchemas } from "./src/lib/schemas.ts";
 
 export default defineConfig({
-  integrations: [zodDecap({ collections: collectionSchemas })],
+  integrations: [
+    zodDecap({
+      collections: collectionSchemas,
+      schemaOwnerHint: "src/lib/schemas.ts",
+      watchSchemas: true, // optional: regen config.yml on schema edits
+    }),
+  ],
 });
 ```
 
