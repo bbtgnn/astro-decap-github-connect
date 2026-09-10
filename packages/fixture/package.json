@@ -16,7 +16,6 @@
 		"zod-decap-local": "workspace:*"
 	},
 	"devDependencies": {
-		"decap-server": "3.11.0",
 		"typescript": "catalog:"
 	}
 }

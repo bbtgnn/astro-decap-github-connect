@@ -17,11 +17,11 @@
 		"check": "tsc -p ."
 	},
 	"dependencies": {
+		"decap-server": "3.11.0",
 		"yaml": "catalog:"
 	},
 	"peerDependencies": {
 		"astro": "^5.13.0",
-		"decap-server": "3.11.0",
 		"zod": "^4.1.5"
 	},
 	"devDependencies": {

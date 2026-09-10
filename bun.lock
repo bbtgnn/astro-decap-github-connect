@@ -19,7 +19,6 @@
         "zod-decap-local": "workspace:*",
       },
       "devDependencies": {
-        "decap-server": "3.11.0",
         "typescript": "catalog:",
       },
     },
@@ -30,6 +29,7 @@
         "zod-decap-local": "./src/cli.ts",
       },
       "dependencies": {
+        "decap-server": "3.11.0",
         "yaml": "catalog:",
       },
       "devDependencies": {
@@ -39,7 +39,6 @@
       },
       "peerDependencies": {
         "astro": "^5.13.0",
-        "decap-server": "3.11.0",
         "zod": "^4.1.5",
       },
     },

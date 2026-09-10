@@ -143,7 +143,7 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 							return;
 						}
 
-						const resolved = resolveDecapServer(root);
+						const resolved = resolveDecapServer();
 						if (!resolved.ok) {
 							logger.error(resolved.message);
 							return;

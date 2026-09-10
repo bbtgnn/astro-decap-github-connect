@@ -34,7 +34,7 @@ The fixture pins `--port 4321`. If that port is already taken, Astro binds the n
 
 `bun run dev` runs the fixture; the integration writes config and starts `decap-server`. Edits save into the working tree — no login.
 
-> `decap-server` is pinned to `3.11.0` (newer publishes use pnpm `catalog:` deps that break non-pnpm installs). Install with `bun add -d decap-server@3.11.0` in the Astro app; the integration errors clearly if it is missing.
+> `decap-server` is pinned to `3.11.0` as a dependency of `zod-decap-local` (newer publishes use pnpm `catalog:` deps that break non-pnpm installs). Consumer apps do not declare it; if resolution fails, reinstall workspace deps / `zod-decap-local`.
 
 Optional: `watchSchemas: true` (with `schemaOwnerHint` pointing at the schemas module) regenerates `config.yml` on schema edits without waiting for a full Astro restart.
 
