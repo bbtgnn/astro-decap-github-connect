@@ -15,9 +15,9 @@
 
 ## Local editorial
 
-`bun run dev` → fixture Astro + integration-spawned `decap-server`. Config must keep `local_backend: true`. No OAuth routes.
+`bun run dev` → fixture Astro + local Decap session (`decap-server`). Config keeps `local_backend` (with `url` when the proxy port ≠ default). No OAuth routes.
 
-Fixture pins port **4321**; if busy, Astro takes the next free port — open `/admin` on that port. `decap-server@3.11.0` is a dependency of `zod-decap-local` (not the Astro app); missing pin should fail with a reinstall hint for the library / workspace deps. `watchSchemas: true` + `schemaOwnerHint` regenerates YAML on schema edits.
+Fixture pins Astro port **4321**; if busy, Astro takes the next free port — open `/admin` on that port. Proxy prefers **8081**; if busy and not owned, session picks a free port and aligns `local_backend.url` before spawn. `decap-server@3.11.0` is a dependency of `zod-decap-local`; missing pin fails with a reinstall hint. `watchSchemas: true` + `schemaOwnerHint` regenerates YAML on schema edits (keeps the session port).
 
 ## Do not
 

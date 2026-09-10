@@ -1,5 +1,3 @@
-import { type ChildProcess, spawn } from "node:child_process";
-import { createConnection } from "node:net";
 import { resolve as resolvePath } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { AstroIntegration } from "astro";
@@ -8,36 +6,13 @@ import {
 	type WriteDecapConfigOptions,
 	writeDecapConfig,
 } from "./codegen";
-import { missingDecapServerMessage, resolveDecapServer } from "./decap-server";
-
-/** Default Decap local proxy port. */
-const DECAP_SERVER_PORT = 8081;
-
-const GLOBAL_DECAP = Symbol.for("zod-decap-local.decapProc");
-
-type DecapGlobal = { proc?: ChildProcess };
-
-function decapGlobal(): DecapGlobal {
-	const g = globalThis as typeof globalThis & {
-		[GLOBAL_DECAP]?: DecapGlobal;
-	};
-	if (!g[GLOBAL_DECAP]) g[GLOBAL_DECAP] = {};
-	return g[GLOBAL_DECAP];
-}
-
-function isAlive(proc: ChildProcess | undefined): boolean {
-	return Boolean(proc && proc.exitCode === null && !proc.killed);
-}
-
-function isPortOpen(port: number, host = "127.0.0.1"): Promise<boolean> {
-	return new Promise((resolve) => {
-		const socket = createConnection({ port, host }, () => {
-			socket.end();
-			resolve(true);
-		});
-		socket.on("error", () => resolve(false));
-	});
-}
+import {
+	DEFAULT_DECAP_PROXY_PORT,
+	ensureLocalDecapSession,
+	getLocalDecapSessionPort,
+	localBackendUrl,
+	type EnsureResult,
+} from "./session";
 
 export type ZodDecapOptions = {
 	collections: readonly CollectionSpec[] | CollectionSpec[];
@@ -46,7 +21,7 @@ export type ZodDecapOptions = {
 	mediaFolder?: string;
 	publicFolder?: string;
 	schemaOwnerHint?: string;
-	/** Spawn `decap-server` during `astro dev`. Default true. */
+	/** Ensure local Decap session during `astro dev`. Default true. */
 	startDecapServer?: boolean;
 	/**
 	 * Opt-in: in `astro dev`, watch schema module(s) and rewrite `config.yml`
@@ -92,15 +67,39 @@ async function loadCollectionSchemas(
 	return mod.collectionSchemas;
 }
 
+function logEnsureResult(
+	logger: { info: (m: string) => void; warn: (m: string) => void; error: (m: string) => void },
+	result: EnsureResult,
+): void {
+	if (result.status === "reused") {
+		logger.info(
+			`Reusing decap-server on :${result.port}${result.version ? `@${result.version}` : ""} (config reload)`,
+		);
+		return;
+	}
+	if (result.status === "started") {
+		if (result.warn) logger.warn(result.warn);
+		const portNote =
+			result.port === DEFAULT_DECAP_PROXY_PORT
+				? `:${result.port}`
+				: `:${result.port} (8081 busy; config local_backend.url aligned)`;
+		logger.info(
+			`Started decap-server@${result.version} for local_backend on ${portNote}`,
+		);
+		return;
+	}
+	logger.error(result.message);
+}
+
 export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 	const startDecapServer = options.startDecapServer ?? true;
 	const adminRoute = options.adminRoute ?? "/admin";
-	let decapProc: ChildProcess | undefined;
 	let projectRoot = "";
 
 	const writeOpts = (
 		root: string,
 		collections: CollectionSpec[] = asMutableCollections(options.collections),
+		localBackend?: string,
 	): WriteDecapConfigOptions => ({
 		root,
 		collections,
@@ -108,6 +107,7 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 		mediaFolder: options.mediaFolder,
 		publicFolder: options.publicFolder,
 		schemaOwnerHint: options.schemaOwnerHint,
+		localBackendUrl: localBackend,
 	});
 
 	return {
@@ -116,10 +116,6 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 			"astro:config:setup": ({ command, config, injectRoute, logger }) => {
 				const root = fileURLToPath(config.root);
 				projectRoot = root;
-				const result = writeDecapConfig(writeOpts(root));
-				if (result.wrote) {
-					logger.info(`Wrote ${options.outFile ?? "public/admin/config.yml"}`);
-				}
 
 				injectRoute({
 					pattern: adminRoute,
@@ -128,62 +124,28 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 
 				if (command === "dev" && startDecapServer) {
 					void (async () => {
-						const state = decapGlobal();
-						if (isAlive(state.proc)) {
-							decapProc = state.proc;
-							logger.info(
-								`Reusing decap-server on :${DECAP_SERVER_PORT} (config reload)`,
-							);
-							return;
-						}
-						if (await isPortOpen(DECAP_SERVER_PORT)) {
-							logger.info(
-								`decap-server already listening on :${DECAP_SERVER_PORT}; not spawning another`,
-							);
-							return;
-						}
-
-						const resolved = resolveDecapServer();
-						if (!resolved.ok) {
-							logger.error(resolved.message);
-							return;
-						}
-						if (resolved.warn) {
-							logger.warn(resolved.warn);
-						}
-
-						decapProc = spawn(process.execPath, [resolved.bin], {
+						const result = await ensureLocalDecapSession({
 							cwd: root,
-							stdio: "inherit",
-							env: process.env,
-						});
-						state.proc = decapProc;
-						decapProc.on("error", (err) => {
-							logger.error(
-								`Failed to start decap-server (${err.message}). ${missingDecapServerMessage()}`,
-							);
-						});
-						decapProc.on("exit", (code, signal) => {
-							if (state.proc === decapProc) state.proc = undefined;
-							decapProc = undefined;
-							if (code && code !== 0) {
-								logger.error(
-									`decap-server exited (code ${code}${signal ? `, signal ${signal}` : ""}). Local /admin writes need it running.`,
+							alignConfig: (port) => {
+								const written = writeDecapConfig(
+									writeOpts(root, undefined, localBackendUrl(port)),
 								);
-							}
+								if (written.wrote) {
+									logger.info(
+										`Wrote ${options.outFile ?? "public/admin/config.yml"} (proxy :${port})`,
+									);
+								}
+							},
 						});
-						const stop = () => {
-							state.proc?.kill();
-							state.proc = undefined;
-							decapProc = undefined;
-						};
-						process.on("exit", stop);
-						process.on("SIGINT", stop);
-						process.on("SIGTERM", stop);
-						logger.info(
-							`Started decap-server@${resolved.version} for local_backend`,
-						);
+						logEnsureResult(logger, result);
 					})();
+				} else {
+					const result = writeDecapConfig(writeOpts(root));
+					if (result.wrote) {
+						logger.info(
+							`Wrote ${options.outFile ?? "public/admin/config.yml"}`,
+						);
+					}
 				}
 			},
 			"astro:server:setup": ({ server, logger }) => {
@@ -213,8 +175,14 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 					if (!hit) return;
 					try {
 						const collections = await loadCollectionSchemas(primary);
+						const port =
+							getLocalDecapSessionPort() ?? DEFAULT_DECAP_PROXY_PORT;
 						const result = writeDecapConfig(
-							writeOpts(projectRoot, collections),
+							writeOpts(
+								projectRoot,
+								collections,
+								localBackendUrl(port),
+							),
 						);
 						if (result.wrote) {
 							logger.info(

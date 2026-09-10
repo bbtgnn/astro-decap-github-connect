@@ -127,6 +127,19 @@ describe("buildDecapConfig", () => {
 		expect(yaml).toMatch(/media_folder: public\/images/);
 		expect(yaml).not.toMatch(/auth_endpoint/);
 	});
+
+	test("emits local_backend.url when aligned to a proxy port", () => {
+		const schema = object(
+			{ title: text({ label: "Title" }) },
+			{ collection: { folder: "src/content/posts" } },
+		);
+		const yaml = buildDecapConfig({
+			collections: [{ name: "posts", schema }],
+			localBackendUrl: "http://127.0.0.1:9090/api/v1",
+		});
+		expect(yaml).toMatch(/url: http:\/\/127\.0\.0\.1:9090\/api\/v1/);
+		expect(yaml).not.toMatch(/local_backend: true/);
+	});
 });
 
 describe("zod meta round-trip", () => {

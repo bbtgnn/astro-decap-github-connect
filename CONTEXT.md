@@ -17,15 +17,19 @@ One-way Zod → `public/admin/config.yml` inside `zod-decap-local` (`buildDecapC
 _Avoid_: bidirectional sync, hand-maintained YAML
 
 **Astro integration**:
-`zodDecap({ collections })` writes config, injects `/admin`, resolves/spawns its own pinned `decap-server@3.11.0` dependency in `astro dev` (cwd = app root), optional `watchSchemas` regen.
-_Avoid_: fat CMS platform features
+`zodDecap({ collections })` writes config, injects `/admin`, drives the local Decap session in `astro dev`, optional `watchSchemas` regen.
+_Avoid_: fat CMS platform features; embedding proxy lifecycle in the integration hook
+
+**Local Decap session**:
+Package-private lifecycle for the pinned `decap-server` proxy: ensure / reuse / stop / ready at the app working-tree `cwd` (binary resolved from the library). Prefers proxy port 8081; if that port is busy and not owned, picks a free port and aligns `local_backend.url` before spawn.
+_Avoid_: soft-adopting a stranger on the port; spawning without aligning config to the chosen port; public start/stop for apps; absorbing pin resolve into this term
 
 **Content contract**:
 Files under `src/content/**` loaded with Astro Content Layer `glob()` / `file()`.
 _Avoid_: custom Decap content adapter / remote loader
 
 **Write-back (stopgap sense)**:
-Decap → `decap-server` → local files → refresh / rebuild.
+Decap → local Decap session (`decap-server`) → local files → refresh / rebuild.
 _Avoid_: conflating with authoring-shell FS write-back via `/_cms`, or remote Git commits
 
 ## Closed decisions

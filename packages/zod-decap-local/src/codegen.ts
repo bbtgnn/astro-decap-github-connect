@@ -44,6 +44,8 @@ export type BuildDecapConfigOptions = {
 	mediaFolder?: string;
 	publicFolder?: string;
 	schemaOwnerHint?: string;
+	/** When set, emit `local_backend.url` so Decap matches the session proxy port. */
+	localBackendUrl?: string;
 };
 
 export type WriteDecapConfigOptions = BuildDecapConfigOptions & {
@@ -172,11 +174,14 @@ export function buildDecapConfig(options: BuildDecapConfigOptions): string {
 		mediaFolder = "public/images",
 		publicFolder = "/images",
 		schemaOwnerHint = "app schemas (Zod + FieldUi meta)",
+		localBackendUrl,
 	} = options;
 
 	const doc = {
 		// Local FS write-back via `decap-server` (no GitHub OAuth).
-		local_backend: true,
+		local_backend: localBackendUrl
+			? { url: localBackendUrl }
+			: true,
 		backend: {
 			name: "git-gateway",
 		},
