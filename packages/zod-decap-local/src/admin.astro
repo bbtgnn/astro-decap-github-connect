@@ -1,16 +1,33 @@
+---
+/**
+ * Thin Decap shell. Config + CMS script URLs come from the integration
+ * (`BASE_URL` + paths beside generated config.yml). Vendored CMS — no CDN.
+ */
+const base = import.meta.env.BASE_URL;
+const configPath =
+	import.meta.env.PUBLIC_ZOD_DECAP_CONFIG_PATH ?? "admin/config.yml";
+const cmsPath =
+	import.meta.env.PUBLIC_ZOD_DECAP_CMS_PATH ?? "admin/decap-cms.js";
+
+function withBase(publicPath: string): string {
+	const b = base.endsWith("/") ? base : `${base}/`;
+	return `${b}${publicPath.replace(/^\//, "")}`;
+}
+
+const configHref = withBase(configPath);
+const cmsHref = withBase(cmsPath);
+---
+
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<meta name="robots" content="noindex" />
-		<link href="/admin/config.yml" type="text/yaml" rel="cms-config-url" />
+		<link href={configHref} type="text/yaml" rel="cms-config-url" />
 		<title>Content Manager</title>
 	</head>
 	<body>
-		<script
-			is:inline
-			src="https://unpkg.com/decap-cms@^3.11.0/dist/decap-cms.js"
-		></script>
+		<script is:inline src={cmsHref}></script>
 	</body>
 </html>

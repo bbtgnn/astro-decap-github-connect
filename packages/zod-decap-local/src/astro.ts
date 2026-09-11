@@ -1,6 +1,7 @@
 import { resolve as resolvePath } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { AstroIntegration } from "astro";
+import { syncVendoredCms } from "./admin-assets";
 import {
 	type CollectionSpec,
 	type WriteDecapConfigOptions,
@@ -68,7 +69,11 @@ async function loadCollectionSchemas(
 }
 
 function logEnsureResult(
-	logger: { info: (m: string) => void; warn: (m: string) => void; error: (m: string) => void },
+	logger: {
+		info: (m: string) => void;
+		warn: (m: string) => void;
+		error: (m: string) => void;
+	},
 	result: EnsureResult,
 ): void {
 	if (result.status === "reused") {
@@ -113,9 +118,35 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 	return {
 		name: "zod-decap-local",
 		hooks: {
-			"astro:config:setup": ({ command, config, injectRoute, logger }) => {
+			"astro:config:setup": ({
+				command,
+				config,
+				injectRoute,
+				logger,
+				updateConfig,
+			}) => {
 				const root = fileURLToPath(config.root);
 				projectRoot = root;
+
+				const assets = syncVendoredCms({
+					root,
+					outFile: options.outFile,
+				});
+				updateConfig({
+					vite: {
+						define: {
+							"import.meta.env.PUBLIC_ZOD_DECAP_CONFIG_PATH": JSON.stringify(
+								assets.configPublicPath,
+							),
+							"import.meta.env.PUBLIC_ZOD_DECAP_CMS_PATH": JSON.stringify(
+								assets.cmsPublicPath,
+							),
+						},
+					},
+				});
+				logger.info(
+					`Synced vendored Decap CMS → public/${assets.cmsPublicPath}`,
+				);
 
 				injectRoute({
 					pattern: adminRoute,

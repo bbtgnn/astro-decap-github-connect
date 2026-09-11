@@ -9,8 +9,8 @@ Zod collection schemas in the consumer app (fixture: `src/lib/schemas.ts`), with
 _Avoid_: treating `config.yml` as source of truth
 
 **Decap editor**:
-Temporary React admin SPA at `/admin` (injected by `zodDecap`) writing the working tree through `local_backend` + `decap-server`.
-_Avoid_: GitHub OAuth, CMS server, shared core with `@cms/*`
+Temporary admin shell injected by `zodDecap` (respects Astro `base` + generated config URL). Loads a vendored pinned Decap CMS browser build and writes the working tree through `local_backend` + the local Decap session. Not gated on session-ready UI.
+_Avoid_: GitHub OAuth, CMS server, CDN script tags, shared core with `@cms/*`; bundling Decap into the site app graph
 
 **Codegen**:
 One-way Zod → `public/admin/config.yml` inside `zod-decap-local` (`buildDecapConfig` / `writeDecapConfig`).
@@ -39,6 +39,7 @@ _Avoid_: conflating with authoring-shell FS write-back via `/_cms`, or remote Gi
 - Monorepo: `zod-decap-local` package + `fixture` app (Bun + Biome, `@cms` tooling style)
 - Media: `public/images` ↔ `/images`
 - Widget subset: string, number, boolean, datetime, select, object, list, markdown, image, relation
+- Decap CMS browser build vendored at `decap-cms@3.11.0` (same pin generation as `decap-server`)
 - Disposable when authoring shell replaces it
 
 ## Out of scope

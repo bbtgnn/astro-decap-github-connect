@@ -5,8 +5,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import { DECAP_SERVER_PIN } from "./pins";
 
-export const DECAP_SERVER_PIN = "3.11.0";
+export { DECAP_SERVER_PIN };
 
 export type DecapServerResolve =
 	| { ok: true; bin: string; version: string; warn?: string }
