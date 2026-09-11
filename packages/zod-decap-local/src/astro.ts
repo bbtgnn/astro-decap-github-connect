@@ -7,12 +7,7 @@ import {
 	type WriteDecapConfigOptions,
 	writeDecapConfig,
 } from "./codegen";
-import {
-	DEFAULT_DECAP_PROXY_PORT,
-	alignedLocalBackendUrl,
-	ensureLocalDecapSession,
-	type EnsureResult,
-} from "./session";
+import { ensureLocalDecapSession, type EnsureResult } from "./session";
 
 export type ZodDecapOptions = {
 	collections: readonly CollectionSpec[] | CollectionSpec[];
@@ -83,12 +78,8 @@ function logEnsureResult(
 	}
 	if (result.status === "started") {
 		if (result.warn) logger.warn(result.warn);
-		const portNote =
-			result.port === DEFAULT_DECAP_PROXY_PORT
-				? `:${result.port}`
-				: `:${result.port} (8081 busy; config local_backend.url aligned)`;
 		logger.info(
-			`Started decap-server@${result.version} for local_backend on ${portNote}`,
+			`Started decap-server@${result.version} for local_backend on :${result.port}`,
 		);
 		return;
 	}
@@ -103,7 +94,6 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 	const writeOpts = (
 		root: string,
 		collections: CollectionSpec[] = asMutableCollections(options.collections),
-		localBackend?: string,
 	): WriteDecapConfigOptions => ({
 		root,
 		collections,
@@ -111,7 +101,6 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 		mediaFolder: options.mediaFolder,
 		publicFolder: options.publicFolder,
 		schemaOwnerHint: options.schemaOwnerHint,
-		localBackendUrl: localBackend,
 	});
 
 	return {
@@ -153,30 +142,17 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 					entrypoint: new URL("./admin.astro", import.meta.url),
 				});
 
+				const written = writeDecapConfig(writeOpts(root));
+				if (written.wrote) {
+					logger.info(
+						`Wrote ${options.outFile ?? "public/admin/config.yml"}`,
+					);
+				}
+
 				if (command === "dev" && startDecapServer) {
-					void (async () => {
-						const result = await ensureLocalDecapSession({
-							cwd: root,
-							alignConfig: (backendUrl) => {
-								const written = writeDecapConfig(
-									writeOpts(root, undefined, backendUrl),
-								);
-								if (written.wrote) {
-									logger.info(
-										`Wrote ${options.outFile ?? "public/admin/config.yml"} (proxy aligned)`,
-									);
-								}
-							},
-						});
+					void ensureLocalDecapSession({ cwd: root }).then((result) => {
 						logEnsureResult(logger, result);
-					})();
-				} else {
-					const result = writeDecapConfig(writeOpts(root));
-					if (result.wrote) {
-						logger.info(
-							`Wrote ${options.outFile ?? "public/admin/config.yml"}`,
-						);
-					}
+					});
 				}
 			},
 			"astro:server:setup": ({ server, logger }) => {
@@ -207,11 +183,7 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 					try {
 						const collections = await loadCollectionSchemas(primary);
 						const result = writeDecapConfig(
-							writeOpts(
-								projectRoot,
-								collections,
-								alignedLocalBackendUrl(),
-							),
+							writeOpts(projectRoot, collections),
 						);
 						if (result.wrote) {
 							logger.info(

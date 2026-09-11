@@ -1,4 +1,4 @@
-# Astro + Decap stopgap (local)
+# Astro + Decap (local)
 
 Monorepo:
 
@@ -7,7 +7,7 @@ Monorepo:
 | `packages/zod-decap-local` | Field helpers, Zod→Decap codegen, Astro integration, CLI |
 | `packages/fixture` | Astro dogfood site (schemas + content) |
 
-Schema owner is **Zod 4** + FieldUi `.meta()` in the **app**. Decap is a temporary **local** editor via `local_backend` + `decap-server`. Astro loads content with Content Layer `glob()` — no Decap loader, no GitHub OAuth.
+Schema owner is **Zod 4** + FieldUi `.meta()` in the **app**. Decap is the **local** editor via `local_backend` + `decap-server`. Astro loads content with Content Layer `glob()` — no Decap loader, no GitHub OAuth.
 
 ## Loop
 
@@ -32,9 +32,9 @@ Open:
 
 The fixture pins `--port 4321`. If that port is already taken, Astro binds the next free port (e.g. 4322) — use that host:port for both the site and `/admin`. The integration logs the admin URL on startup (and calls out when it had to leave 4321).
 
-`bun run dev` runs the fixture; the integration writes config (aligned to the proxy port) and starts a local Decap session. Edits save into the working tree — no login.
+`bun run dev` runs the fixture; the integration writes config (`local_backend: true`) and starts a local Decap session on **8081**. Edits save into the working tree — no login.
 
-> `decap-server` is pinned to `3.11.0` as a dependency of `zod-decap-local` (newer publishes use pnpm `catalog:` deps that break non-pnpm installs). Consumer apps do not declare it; if resolution fails, reinstall workspace deps / `zod-decap-local`. Proxy prefers port `8081`; if that port is busy and not owned, the session picks a free port and sets `local_backend.url` before spawn. The Decap CMS UI script is **vendored** at the same pin (no CDN) and synced into `public/admin/`.
+> `decap-server` is pinned to `3.11.0` as a dependency of `zod-decap-local` (newer publishes use pnpm `catalog:` deps that break non-pnpm installs). Consumer apps do not declare it; if resolution fails, reinstall workspace deps / `zod-decap-local`. Proxy requires port `8081`; if that port is busy and not owned by our session, startup fails (no free-port pick, no YAML URL rewrite). The Decap CMS UI script is **vendored** at the same pin (no CDN) and synced into `public/admin/`.
 
 Optional: `watchSchemas: true` (with `schemaOwnerHint` pointing at the schemas module) regenerates `config.yml` on schema edits without waiting for a full Astro restart.
 
@@ -86,6 +86,6 @@ After the first successful deploy, set the repo Pages source to **GitHub Actions
 2. Do not add YAML→Zod or bidirectional sync
 3. Do not add a Content Layer “Decap loader”
 4. Do not reintroduce GitHub OAuth unless product scope changes
-5. Not `@cms/*` — disposable when the authoring shell lands
+5. Keep this package separate from `@cms/*`
 
 See `CONTEXT.md` and `AGENTS.md`.

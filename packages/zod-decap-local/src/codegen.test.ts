@@ -128,16 +128,16 @@ describe("buildDecapConfig", () => {
 		expect(yaml).not.toMatch(/auth_endpoint/);
 	});
 
-	test("emits local_backend.url when aligned to a proxy port", () => {
+	test("emits local_backend.url when an optional override is set", () => {
 		const schema = object(
 			{ title: text({ label: "Title" }) },
 			{ collection: { folder: "src/content/posts" } },
 		);
 		const yaml = buildDecapConfig({
 			collections: [{ name: "posts", schema }],
-			localBackendUrl: "http://127.0.0.1:9090/api/v1",
+			localBackendUrl: "http://127.0.0.1:8081/api/v1",
 		});
-		expect(yaml).toMatch(/url: http:\/\/127\.0\.0\.1:9090\/api\/v1/);
+		expect(yaml).toMatch(/url: http:\/\/127\.0\.0\.1:8081\/api\/v1/);
 		expect(yaml).not.toMatch(/local_backend: true/);
 	});
 });

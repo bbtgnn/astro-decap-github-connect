@@ -1,9 +1,9 @@
 /**
  * Local Decap session — package-private lifecycle for pinned `decap-server`.
- * Binary from the library; cwd = app root for write-back. Prefer :8081; else free port + align config.
+ * Binary from the library; cwd = app root for write-back. Proxy is always :8081.
  */
 import { type ChildProcess, spawn as nodeSpawn } from "node:child_process";
-import { createConnection, createServer } from "node:net";
+import { createConnection } from "node:net";
 import {
 	missingDecapServerMessage,
 	resolveDecapServer,
@@ -22,9 +22,6 @@ type SessionState = {
 	signalsRegistered?: boolean;
 };
 
-/** Align emitted YAML to the session proxy. Receives the API URL, not a raw port. */
-export type AlignConfig = (backendUrl: string) => void | Promise<void>;
-
 export type EnsureResult =
 	| { status: "started"; port: number; version: string; warn?: string }
 	| { status: "reused"; port: number; version?: string }
@@ -34,7 +31,6 @@ export type SessionDeps = {
 	resolve?: () => DecapServerResolve;
 	spawn?: typeof nodeSpawn;
 	isPortOpen?: (port: number, host?: string) => Promise<boolean>;
-	findFreePort?: () => Promise<number>;
 	now?: () => number;
 	sleep?: (ms: number) => Promise<void>;
 };
@@ -62,20 +58,19 @@ export function getLocalDecapSessionPort(): number | undefined {
 }
 
 export function localBackendUrl(
-	port: number,
+	port: number = DEFAULT_DECAP_PROXY_PORT,
 	host = "127.0.0.1",
 ): string {
 	return `http://${host}:${port}/api/v1`;
 }
 
 /**
- * Proxy API URL when the session has chosen a port; otherwise not ready.
- * Watch/regen must not invent `:8081` — call this instead of guessing.
+ * Proxy API URL when the session owns :8081; otherwise not ready.
+ * Honest fixed-port helper — callers must not invent an alternate URL.
  */
 export function alignedLocalBackendUrl(): string | undefined {
-	const port = sessionState().port;
-	if (port == null) return undefined;
-	return localBackendUrl(port);
+	if (sessionState().port == null) return undefined;
+	return localBackendUrl(DEFAULT_DECAP_PROXY_PORT);
 }
 
 export function isAlive(proc: ChildProcess | undefined): boolean {
@@ -93,37 +88,6 @@ export function isPortOpen(
 		});
 		socket.on("error", () => resolve(false));
 	});
-}
-
-export function findFreePort(host = "127.0.0.1"): Promise<number> {
-	return new Promise((resolve, reject) => {
-		const server = createServer();
-		server.listen(0, host, () => {
-			const addr = server.address();
-			if (!addr || typeof addr === "string") {
-				server.close(() => reject(new Error("Could not allocate a free port")));
-				return;
-			}
-			const { port } = addr;
-			server.close((err) => {
-				if (err) reject(err);
-				else resolve(port);
-			});
-		});
-		server.on("error", reject);
-	});
-}
-
-/** Prefer 8081 when free; otherwise any free port (no soft-adopt of strangers). */
-export async function pickProxyPort(
-	deps: Pick<SessionDeps, "isPortOpen" | "findFreePort"> = {},
-): Promise<number> {
-	const open = deps.isPortOpen ?? isPortOpen;
-	const free = deps.findFreePort ?? findFreePort;
-	if (!(await open(DEFAULT_DECAP_PROXY_PORT))) {
-		return DEFAULT_DECAP_PROXY_PORT;
-	}
-	return free();
 }
 
 async function waitUntilPortOpen(
@@ -165,18 +129,16 @@ export function stopLocalDecapSession(): void {
 }
 
 /**
- * Ensure a local Decap proxy for `cwd`. Calls `alignConfig(backendUrl)` after choosing
- * the port and before spawn so YAML and process never disagree.
+ * Ensure a local Decap proxy for `cwd` on the fixed Decap default port (:8081).
+ * Reuses the process-global session across Vite reloads; fails if a stranger holds 8081.
  */
 export async function ensureLocalDecapSession(options: {
 	cwd: string;
-	alignConfig: AlignConfig;
 	readyTimeoutMs?: number;
 	deps?: SessionDeps;
 }): Promise<EnsureResult> {
 	const {
 		cwd,
-		alignConfig,
 		readyTimeoutMs = DEFAULT_READY_TIMEOUT_MS,
 		deps = {},
 	} = options;
@@ -184,9 +146,9 @@ export async function ensureLocalDecapSession(options: {
 	const resolve = deps.resolve ?? (() => resolveDecapServer());
 	const spawn = deps.spawn ?? nodeSpawn;
 	const open = deps.isPortOpen ?? isPortOpen;
+	const port = DEFAULT_DECAP_PROXY_PORT;
 
 	if (isAlive(state.proc) && state.port != null) {
-		await alignConfig(localBackendUrl(state.port));
 		return {
 			status: "reused",
 			port: state.port,
@@ -194,27 +156,15 @@ export async function ensureLocalDecapSession(options: {
 		};
 	}
 
-	// Stale handle — clear before picking a port.
+	// Stale handle — clear before claiming the port.
 	state.proc = undefined;
+	state.port = undefined;
+	state.version = undefined;
 
-	let port: number;
-	try {
-		port = await pickProxyPort({
-			isPortOpen: open,
-			findFreePort: deps.findFreePort,
-		});
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		return { status: "failed", message: `Could not pick proxy port: ${message}` };
-	}
-
-	try {
-		await alignConfig(localBackendUrl(port));
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
+	if (await open(port)) {
 		return {
 			status: "failed",
-			message: `Failed to align Decap config for port ${port}: ${message}`,
+			message: `Port ${port} is already in use. Free :${port} (do not soft-adopt strangers) and retry.`,
 			port,
 		};
 	}

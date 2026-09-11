@@ -44,7 +44,7 @@ export type BuildDecapConfigOptions = {
 	mediaFolder?: string;
 	publicFolder?: string;
 	schemaOwnerHint?: string;
-	/** When set, emit `local_backend.url` so Decap matches the session proxy port. */
+	/** Optional override; default emit is `local_backend: true` (Decap default :8081). */
 	localBackendUrl?: string;
 };
 
