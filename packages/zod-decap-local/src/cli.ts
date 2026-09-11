@@ -1,6 +1,6 @@
 /**
  * CLI for CI drift checks. Prefer the Astro integration for normal writes.
- * Entry points: `bin.mjs` (Node / process.execPath) or `bun src/cli.ts` in-monorepo.
+ * Built to `dist/cli.js` (bin + process.execPath); monorepo may run `bun src/cli.ts`.
  *
  *   zod-decap-local --check --root .
  *   zod-decap-local --root . --content-config ./src/content.config.ts

@@ -3,6 +3,8 @@
  * Re-exports the real module; wraps `reference` / function-schema `image()`
  * with Decap field meta without replacing Astro validators.
  */
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const PROXY_ID = "\0zod-decap-local/astro-content-proxy";
@@ -19,6 +21,19 @@ type PluginContext = {
 		opts?: { skipSelf?: boolean; custom?: Record<string, unknown> },
 	) => Promise<{ id: string } | null>;
 };
+
+function resolveMetaModuleHref(): string {
+	const base = dirname(fileURLToPath(import.meta.url));
+	const js = join(base, "meta.js");
+	const ts = join(base, "meta.ts");
+	const file = existsSync(js) ? js : ts;
+	if (!existsSync(file)) {
+		throw new Error(
+			`zod-decap-local meta module missing under ${base}. Run \`bun run build\`.`,
+		);
+	}
+	return pathToFileURL(file).href;
+}
 
 export function astroContentBootProxy() {
 	let realId: string | undefined;
@@ -47,11 +62,7 @@ export function astroContentBootProxy() {
 		load(id: string) {
 			if (id !== PROXY_ID || !realId) return;
 			const real = JSON.stringify(realId);
-			const metaHref = JSON.stringify(
-				pathToFileURL(
-					fileURLToPath(new URL("./meta.ts", import.meta.url)),
-				).href,
-			);
+			const metaHref = JSON.stringify(resolveMetaModuleHref());
 			return `
 import * as __real from ${real};
 import { fieldOptions } from ${metaHref};

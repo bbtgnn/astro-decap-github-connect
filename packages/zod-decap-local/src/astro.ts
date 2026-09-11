@@ -1,15 +1,15 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createConnection } from "node:net";
 import { resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
-import { ensureCliBundle } from "./cli-bundle";
-import { missingDecapServerMessage, resolveDecapServer } from "./decap-server";
 import {
 	resolveContentConfigPath,
 	viteAliasesForBoot,
 	vitePluginsForBoot,
 } from "./content-paths";
+import { missingDecapServerMessage, resolveDecapServer } from "./decap-server";
 
 const DECAP_SERVER_PORT = 8081;
 const GLOBAL_DECAP = Symbol.for("zod-decap-local.decapProc");
@@ -38,13 +38,23 @@ function isPortOpen(port: number, host = "127.0.0.1"): Promise<boolean> {
 	});
 }
 
+/** Compiled CLI next to this module (`dist/cli.js` after `bun run build`). */
+function resolveCliEntry(): string {
+	const entry = fileURLToPath(new URL("./cli.js", import.meta.url));
+	if (!existsSync(entry)) {
+		throw new Error(
+			`zod-decap-local CLI missing at ${entry}. Run \`bun run build\` in packages/zod-decap-local.`,
+		);
+	}
+	return entry;
+}
+
 /** Run Decap emit in a child process (same runtime as Astro; avoids Vite module-runner). */
 function runEmitCli(
 	root: string,
 	options: ZodDecapOptions,
 ): { wrote: boolean } {
-	const entry = ensureCliBundle();
-	const args = [entry, "--root", root];
+	const args = [resolveCliEntry(), "--root", root];
 	if (options.contentConfig) {
 		args.push("--content-config", options.contentConfig);
 	}

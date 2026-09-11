@@ -5,14 +5,18 @@
 	"type": "module",
 	"description": "Zod → Decap config codegen + local Astro integration (stopgap)",
 	"exports": {
-		".": "./src/index.ts",
-		"./astro": "./src/astro.ts",
-		"./admin": "./src/admin.astro"
+		".": "./dist/index.js",
+		"./astro": "./dist/astro.js",
+		"./admin": "./dist/admin.astro"
 	},
 	"bin": {
-		"zod-decap-local": "./src/bin.mjs"
+		"zod-decap-local": "./dist/cli.js"
 	},
+	"files": [
+		"dist"
+	],
 	"scripts": {
+		"build": "bun ./build.ts",
 		"test": "bun test src",
 		"check": "tsc -p ."
 	},

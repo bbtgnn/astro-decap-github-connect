@@ -2,7 +2,7 @@
  * Content-config path discovery + Vite boot aliases / plugins (no esbuild).
  */
 import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { astroContentBootProxy } from "./vite-astro-content-proxy";
 
@@ -28,13 +28,18 @@ export function resolveContentConfigPath(
 }
 
 export function shimPaths() {
-	const loaders = fileURLToPath(
-		new URL("./shims/astro-loaders.ts", import.meta.url),
-	);
-	const content = fileURLToPath(
-		new URL("./shims/astro-content.ts", import.meta.url),
-	);
-	return { loaders, content };
+	const base = dirname(fileURLToPath(import.meta.url));
+	const pick = (name: string) => {
+		const js = join(base, "shims", `${name}.js`);
+		const ts = join(base, "shims", `${name}.ts`);
+		if (existsSync(js)) return js;
+		if (existsSync(ts)) return ts;
+		throw new Error(`Missing shim ${name} under ${base}/shims`);
+	};
+	return {
+		loaders: pick("astro-loaders"),
+		content: pick("astro-content"),
+	};
 }
 
 /** Boot-time aliases for `astro/loaders` (stamp glob/file inputs). */

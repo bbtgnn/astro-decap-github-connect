@@ -6,7 +6,6 @@ dist/
 .astro/
 .vite/
 .cache/
-**/cli.bundled.mjs
 
 # env / secrets
 .env
