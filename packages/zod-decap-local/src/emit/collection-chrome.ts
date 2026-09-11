@@ -1,8 +1,10 @@
 /**
- * Loader stamp + collection meta → Decap collection chrome and fields.
+ * Private to Decap emit: loader stamp + collection meta → chrome and fields.
  */
 import type { Loader } from "astro/loaders";
 import type { z } from "zod";
+import type { CollectionOptions, DecapMeta } from "../meta";
+import { getLoaderStamp, type LoaderStamp } from "../stamps";
 import {
 	assertNoRefs,
 	collectionOptionsOf,
@@ -11,8 +13,6 @@ import {
 	objectFieldsFromJson,
 	toEmitJsonSchema,
 } from "./json-schema-to-fields";
-import type { CollectionOptions, DecapMeta } from "./meta";
-import { getLoaderStamp, type LoaderStamp } from "./stamps";
 
 export type DecapCollection = {
 	name: string;

@@ -6,7 +6,7 @@
  *   zod-decap-local --root . --content-config ./src/content.config.ts
  */
 import { resolve } from "node:path";
-import { emitFromContentConfig } from "./codegen";
+import { emitFromContentConfig } from "./emit";
 
 function argValue(flag: string): string | undefined {
 	const idx = process.argv.indexOf(flag);

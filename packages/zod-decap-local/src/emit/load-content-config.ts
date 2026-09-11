@@ -1,12 +1,12 @@
 /**
- * Turn Astro `content.config` `collections` into emit-ready entries.
+ * Private to Decap emit: content.config `collections` → emit-ready entries.
  *
  * Flow: resolve path → bundle/import with shims → materialize schemas → list.
  */
 import type { Loader } from "astro/loaders";
 import { z } from "zod";
-import { resolveContentConfigPath } from "./content-paths";
-import { astroImageSchema } from "./image-bridge";
+import { resolveContentConfigPath } from "../content-paths";
+import { astroImageSchema } from "../image-bridge";
 import { importBundledContentConfig } from "./import-bundled-content-config";
 
 /**

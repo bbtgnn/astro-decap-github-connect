@@ -1,8 +1,13 @@
 /**
- * Walk Zod `toJSONSchema` output (+ Decap meta) into Decap field configs.
+ * Private to Decap emit: Zod `toJSONSchema` (+ Decap meta) → field configs.
  */
 import { z } from "zod";
-import type { CollectionOptions, DecapMeta, DecapWidget, FieldOptions } from "./meta";
+import type {
+	CollectionOptions,
+	DecapMeta,
+	DecapWidget,
+	FieldOptions,
+} from "../meta";
 
 /** JSON Schema from Zod, plus Decap meta keys merged by `toJSONSchema`. */
 export type EmitJsonSchema = z.core.JSONSchema.JSONSchema & DecapMeta;

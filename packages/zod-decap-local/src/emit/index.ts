@@ -1,8 +1,12 @@
 /**
- * Assemble Decap `config.yml` from loaded content-config collections.
+ * Decap emit — package-internal seam for content-config → `config.yml`.
  *
- * Field walk: `json-schema-to-fields.ts`
- * Collection chrome: `collection-chrome.ts`
+ * Callers (CLI, tests) use `emitFromContentConfig` / `writeDecapConfig` /
+ * `buildDecapConfig`. Field walk, collection chrome, and content-config load
+ * stay private under this module; they are not part of the package public API.
+ *
+ * Testable helpers (`fieldFromZod`, `collectionFromSchema`) re-export here so
+ * unit tests share the same seam without importing implementation files.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

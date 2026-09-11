@@ -21,7 +21,7 @@ Optional collection-level meta (`label`, `folder`, `format`, …) when the loade
 _Avoid_: duplicating folder paths only for Decap when the Astro loader already defines them
 
 **Loader stamp**:
-Passthrough record of Astro loader inputs (`glob` / `file` base, pattern, …) visible to codegen without changing Content Layer behaviour.
+Passthrough record of Astro loader inputs (`glob` / `file` base, pattern, …) visible to Decap emit without changing Content Layer behaviour.
 _Avoid_: parsing loader closures or `.astro` data-store as source of truth
 
 **Astro content proxy**:

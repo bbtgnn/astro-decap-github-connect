@@ -1,13 +1,26 @@
 /**
- * Bundle + import an Astro content.config outside Vite.
- * Rewrites `astro:content` / `astro/loaders` to our emit shims, then dynamic-imports
+ * Private to Decap emit: bundle + import content.config outside Vite.
+ * Rewrites `astro:content` / `astro/loaders` to emit shims, then dynamic-imports
  * the result. Implementation detail of `load-content-config`.
  */
 import * as esbuild from "esbuild";
-import { mkdirSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { shimPaths } from "./content-paths";
+import { shimPaths } from "../content-paths";
+
+/** Package root whether this file lives under `src/` or `src/emit/`, or is bundled to `src/*.mjs`. */
+function packageRoot(fromImportMetaUrl: string): string {
+	let dir = dirname(fileURLToPath(fromImportMetaUrl));
+	for (;;) {
+		if (existsSync(join(dir, "package.json"))) return dir;
+		const parent = dirname(dir);
+		if (parent === dir) {
+			throw new Error("Could not find zod-decap-local package root");
+		}
+		dir = parent;
+	}
+}
 
 export async function importBundledContentConfig<T extends Record<string, unknown>>(
 	options: {
@@ -25,8 +38,7 @@ export async function importBundledContentConfig<T extends Record<string, unknow
 	);
 	mkdirSync(dirname(outfile), { recursive: true });
 
-	// Package root (stable when this module is bundled beside `src/`).
-	const pkgDir = fileURLToPath(new URL("..", import.meta.url));
+	const pkgDir = packageRoot(import.meta.url);
 
 	await esbuild.build({
 		absWorkingDir: options.root,

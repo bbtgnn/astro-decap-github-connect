@@ -4,7 +4,7 @@ import {
 	buildDecapConfig,
 	collectionFromSchema,
 	fieldFromZod,
-} from "./codegen";
+} from "./emit";
 import {
 	astroImageSchema,
 	decapPathToAstroImage,
@@ -221,7 +221,7 @@ describe("writeDecapConfig skip-unchanged", () => {
 			await import("node:fs");
 		const { join } = await import("node:path");
 		const { tmpdir } = await import("node:os");
-		const { writeDecapConfig } = await import("./codegen");
+		const { writeDecapConfig } = await import("./emit");
 
 		const root = mkdtempSync(join(tmpdir(), "zod-decap-"));
 		mkdirSync(join(root, "public/admin"), { recursive: true });
