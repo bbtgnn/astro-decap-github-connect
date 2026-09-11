@@ -36,7 +36,7 @@ The fixture pins `--port 4321`. If that port is already taken, Astro binds the n
 
 > `decap-server` and `decap-cms` are pinned to `3.11.0` as dependencies of `zod-decap-local` (newer `decap-server` publishes use pnpm `catalog:` deps that break non-pnpm installs). Consumer apps do not declare them; if resolution fails, reinstall workspace deps / `zod-decap-local`. Proxy requires port `8081`; if that port is busy and not owned by our session, startup fails (no free-port pick, no YAML URL rewrite). The Decap CMS UI script is taken from the installed `decap-cms` package (no CDN / no hand-vendored blob) and synced into `public/admin/`.
 
-Optional: `watchSchemas: true` (with `schemaOwnerHint` pointing at the schemas module) regenerates `config.yml` on schema edits without waiting for a full Astro restart.
+Schema edits require an Astro restart (or CLI emit) so `config.yml` regenerates — there is no separate schema-watch path in the integration.
 
 ## Consumer sketch
 
@@ -51,7 +51,6 @@ export default defineConfig({
     zodDecap({
       collections: collectionSchemas,
       schemaOwnerHint: "src/lib/schemas.ts",
-      watchSchemas: true, // optional: regen config.yml on schema edits
     }),
   ],
 });

@@ -16,7 +16,6 @@ export default defineConfig({
 		zodDecap({
 			collections: collectionSchemas,
 			schemaOwnerHint: "src/lib/schemas.ts",
-			watchSchemas: true,
 		}),
 	],
 });

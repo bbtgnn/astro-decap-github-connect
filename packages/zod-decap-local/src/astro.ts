@@ -1,5 +1,4 @@
-import { resolve as resolvePath } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
 import { publishAdmin } from "./admin-assets";
 import {
@@ -18,48 +17,12 @@ export type ZodDecapOptions = {
 	schemaOwnerHint?: string;
 	/** Ensure local Decap session during `astro dev`. Default true. */
 	startDecapServer?: boolean;
-	/**
-	 * Opt-in: in `astro dev`, watch schema module(s) and rewrite `config.yml`
-	 * without waiting for a full Astro restart. `true` uses `schemaOwnerHint`
-	 * as the module path (must export `collectionSchemas`).
-	 */
-	watchSchemas?: boolean | string | readonly string[];
 };
 
 function asMutableCollections(
 	collections: ZodDecapOptions["collections"],
 ): CollectionSpec[] {
 	return [...collections];
-}
-
-function resolveWatchModules(
-	root: string,
-	watch: ZodDecapOptions["watchSchemas"],
-	schemaOwnerHint: string | undefined,
-): string[] {
-	if (watch === undefined || watch === false) return [];
-	const raw: string[] =
-		watch === true
-			? schemaOwnerHint
-				? [schemaOwnerHint]
-				: []
-			: typeof watch === "string"
-				? [watch]
-				: [...watch];
-	return raw.map((p) => resolvePath(root, p));
-}
-
-async function loadCollectionSchemas(
-	modulePath: string,
-): Promise<CollectionSpec[]> {
-	const href = `${pathToFileURL(modulePath).href}?t=${Date.now()}`;
-	const mod = (await import(/* @vite-ignore */ href)) as {
-		collectionSchemas?: CollectionSpec[];
-	};
-	if (!Array.isArray(mod.collectionSchemas)) {
-		throw new Error(`${modulePath} must export collectionSchemas array`);
-	}
-	return mod.collectionSchemas;
 }
 
 function logEnsureResult(
@@ -89,14 +52,10 @@ function logEnsureResult(
 export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 	const startDecapServer = options.startDecapServer ?? true;
 	const adminRoute = options.adminRoute ?? "/admin";
-	let projectRoot = "";
 
-	const writeOpts = (
-		root: string,
-		collections: CollectionSpec[] = asMutableCollections(options.collections),
-	): WriteDecapConfigOptions => ({
+	const writeOpts = (root: string): WriteDecapConfigOptions => ({
 		root,
-		collections,
+		collections: asMutableCollections(options.collections),
 		outFile: options.outFile,
 		mediaFolder: options.mediaFolder,
 		publicFolder: options.publicFolder,
@@ -114,7 +73,6 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 				updateConfig,
 			}) => {
 				const root = fileURLToPath(config.root);
-				projectRoot = root;
 
 				const assets = publishAdmin({
 					root,
@@ -154,49 +112,6 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 						logEnsureResult(logger, result);
 					});
 				}
-			},
-			"astro:server:setup": ({ server, logger }) => {
-				const modules = resolveWatchModules(
-					projectRoot,
-					options.watchSchemas,
-					options.schemaOwnerHint,
-				);
-				if (modules.length === 0) {
-					if (options.watchSchemas === true && !options.schemaOwnerHint) {
-						logger.warn(
-							"watchSchemas: true needs schemaOwnerHint (path to the module exporting collectionSchemas).",
-						);
-					}
-					return;
-				}
-
-				const primary = modules[0];
-				for (const mod of modules) {
-					server.watcher.add(mod);
-				}
-
-				const onChange = async (changed: string) => {
-					const hit = modules.some(
-						(m) => changed === m || resolvePath(changed) === m,
-					);
-					if (!hit) return;
-					try {
-						const collections = await loadCollectionSchemas(primary);
-						const result = writeDecapConfig(
-							writeOpts(projectRoot, collections),
-						);
-						if (result.wrote) {
-							logger.info(
-								`Regenerated ${options.outFile ?? "public/admin/config.yml"} (schema watch)`,
-							);
-						}
-					} catch (err) {
-						const msg = err instanceof Error ? err.message : String(err);
-						logger.error(`Schema watch regenerate failed: ${msg}`);
-					}
-				};
-
-				server.watcher.on("change", onChange);
 			},
 			"astro:server:start": ({ address, logger }) => {
 				const host =

@@ -17,7 +17,7 @@ One-way Zod → `public/admin/config.yml` inside `zod-decap-local` (`buildDecapC
 _Avoid_: bidirectional sync, hand-maintained YAML
 
 **Astro integration**:
-`zodDecap({ collections })` writes config, injects `/admin`, drives the local Decap session in `astro dev`, optional `watchSchemas` regen.
+`zodDecap({ collections })` writes config, injects `/admin`, drives the local Decap session in `astro dev`. Schema edits need an Astro restart / normal config setup emit.
 _Avoid_: fat CMS platform features; embedding proxy lifecycle in the integration hook
 
 **Local Decap session**:
