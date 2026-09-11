@@ -6,7 +6,7 @@ import {
 	cmsPublicPathFromOutFile,
 	publicUrlPathFromOutFile,
 	publishAdmin,
-	vendorCmsSourcePath,
+	resolveCmsBrowserBuild,
 	withBaseUrl,
 } from "./admin-assets";
 
@@ -36,10 +36,15 @@ describe("admin asset paths", () => {
 		);
 	});
 
-	test("publishAdmin syncs vendor and returns base-joined hrefs", () => {
+	test("resolveCmsBrowserBuild finds dist/decap-cms.js from npm pin", () => {
+		const src = resolveCmsBrowserBuild();
+		expect(existsSync(src)).toBe(true);
+		expect(src.replace(/\\/g, "/")).toMatch(/decap-cms[/].*decap-cms\.js$/);
+	});
+
+	test("publishAdmin syncs npm CMS build and returns base-joined hrefs", () => {
 		const root = mkdtempSync(join(tmpdir(), "zod-decap-admin-"));
 		try {
-			expect(existsSync(vendorCmsSourcePath())).toBe(true);
 			const published = publishAdmin({
 				root,
 				base: "/site/",

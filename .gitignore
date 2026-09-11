@@ -19,5 +19,5 @@ dist/
 .vscode/*
 !.vscode/extensions.json
 
-# Copied from zod-decap-local/vendor on astro dev/build — source of truth is vendor/
+# Synced from decap-cms (npm) on astro dev/build — not source of truth
 packages/fixture/public/admin/decap-cms.js

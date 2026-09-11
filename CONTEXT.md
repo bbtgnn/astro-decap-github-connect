@@ -9,7 +9,7 @@ Zod collection schemas in the consumer app (fixture: `src/lib/schemas.ts`), with
 _Avoid_: treating `config.yml` as source of truth
 
 **Decap editor**:
-Admin UI at `/admin` injected by `zodDecap`. `publishAdmin` syncs the vendored CMS beside `config.yml` and binds final config/script hrefs (Astro `base` already applied). Writes the working tree through `local_backend` + the local Decap session.
+Admin UI at `/admin` injected by `zodDecap`. `publishAdmin` syncs the pinned `decap-cms` browser build from `node_modules` beside `config.yml` and binds final config/script hrefs (Astro `base` already applied). Writes the working tree through `local_backend` + the local Decap session.
 _Avoid_: GitHub OAuth, CMS server, CDN script tags, path/env round-trips in the shell, shared core with `@cms/*`; bundling Decap into the site app graph
 
 **Codegen**:
@@ -42,7 +42,7 @@ _Avoid_: remote Git commits; treating static hosting as an editorial environment
 - Monorepo: `zod-decap-local` package + `fixture` app (Bun + Biome)
 - Media: `public/images` ↔ `/images`
 - Widget subset: string, number, boolean, datetime, select, object, list, markdown, image, relation
-- Decap CMS browser build vendored at `decap-cms@3.11.0` (same pin generation as `decap-server`)
+- Decap CMS browser build from npm `decap-cms@3.11.0` (same pin generation as `decap-server`; synced into app `public/` at publish)
 - Not shared packages / architecture with `@cms/*`
 
 ## Out of scope

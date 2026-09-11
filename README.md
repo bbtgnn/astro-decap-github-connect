@@ -34,7 +34,7 @@ The fixture pins `--port 4321`. If that port is already taken, Astro binds the n
 
 `bun run dev` runs the fixture; the integration writes config (`local_backend: true`) and starts a local Decap session on **8081**. Edits save into the working tree — no login.
 
-> `decap-server` is pinned to `3.11.0` as a dependency of `zod-decap-local` (newer publishes use pnpm `catalog:` deps that break non-pnpm installs). Consumer apps do not declare it; if resolution fails, reinstall workspace deps / `zod-decap-local`. Proxy requires port `8081`; if that port is busy and not owned by our session, startup fails (no free-port pick, no YAML URL rewrite). The Decap CMS UI script is **vendored** at the same pin (no CDN) and synced into `public/admin/`.
+> `decap-server` and `decap-cms` are pinned to `3.11.0` as dependencies of `zod-decap-local` (newer `decap-server` publishes use pnpm `catalog:` deps that break non-pnpm installs). Consumer apps do not declare them; if resolution fails, reinstall workspace deps / `zod-decap-local`. Proxy requires port `8081`; if that port is busy and not owned by our session, startup fails (no free-port pick, no YAML URL rewrite). The Decap CMS UI script is taken from the installed `decap-cms` package (no CDN / no hand-vendored blob) and synced into `public/admin/`.
 
 Optional: `watchSchemas: true` (with `schemaOwnerHint` pointing at the schemas module) regenerates `config.yml` on schema edits without waiting for a full Astro restart.
 

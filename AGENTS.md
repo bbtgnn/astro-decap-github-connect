@@ -17,7 +17,7 @@
 
 `bun run dev` → fixture Astro + local Decap session (`decap-server`). Config keeps `local_backend: true` (Decap default proxy on **8081**). No OAuth routes.
 
-Fixture pins Astro port **4321**; if busy, Astro takes the next free port — open `/admin` on that port. Proxy requires **8081**; if busy and not owned by our session, fail (no free-port pick, no YAML URL rewrite). `decap-server@3.11.0` is a dependency of `zod-decap-local`; Decap CMS browser build is **vendored** (`vendor/decap-cms.js`, same pin) and copied into app `public/` beside `config.yml`. Missing server pin fails with a reinstall hint. `watchSchemas: true` + `schemaOwnerHint` regenerates YAML on schema edits.
+Fixture pins Astro port **4321**; if busy, Astro takes the next free port — open `/admin` on that port. Proxy requires **8081**; if busy and not owned by our session, fail (no free-port pick, no YAML URL rewrite). `decap-server@3.11.0` and `decap-cms@3.11.0` are dependencies of `zod-decap-local` (same pin); `publishAdmin` copies the CMS browser build from the installed package into app `public/` beside `config.yml`. Missing pins fail with a reinstall hint. `watchSchemas: true` + `schemaOwnerHint` regenerates YAML on schema edits.
 
 ## Do not
 
