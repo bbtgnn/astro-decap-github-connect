@@ -25,8 +25,8 @@ Passthrough record of Astro loader inputs (`glob` / `file` base, pattern, …) v
 _Avoid_: parsing loader closures or `.astro` data-store as source of truth
 
 **Astro content proxy**:
-Boot-time passthrough of `astro:content` / `astro/loaders` symbols (`reference`, `glob`, `file`, and `image` via collection setup) that preserves Astro validation and adds stamps/meta for emit.
-_Avoid_: replacing Astro validators with Decap-only fakes in the app graph
+Shared stamp helpers (relation / image meta, loader stamps) with thin boot and emit adapters — boot wraps live `astro:content` / aliases `astro/loaders`; emit rewrites both to shims — preserving Astro validation while adding stamps/meta for emit.
+_Avoid_: replacing Astro validators with Decap-only fakes in the app graph; forcing one runtime path for boot and emit
 
 **Decap emit**:
 One-way walk from content-config collections → `public/admin/config.yml` (load + build + write/check).
@@ -57,7 +57,7 @@ _Avoid_: conflating with authoring-shell FS write-back via `/_cms`, or remote Gi
 - Zod → Decap YAML only; registry is Astro `collections`, not a side list
 - Plain Zod + optional `fieldOptions` / `collectionOptions`; derive widgets aggressively; hard-fail mismatched meta at emit
 - Local Decap only (`local_backend`); no GitHub OAuth in this stopgap
-- Boot-time content proxies (passthrough + stamp); CLI uses the same shim modules
+- Astro content proxy: shared stamps + boot/emit adapters (passthrough + stamp); CLI shares emit shims
 - Monorepo: `zod-decap-local` package + `fixture` app (Bun + Biome, `@cms` tooling style)
 - Media: `public/images` ↔ `/images`
 - Widget subset: string, number, boolean, datetime, select, object, list, markdown, image, relation

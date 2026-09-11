@@ -11,7 +11,7 @@ import {
 	imagePathForDecap,
 } from "./image-bridge";
 import { collectionOptions, fieldOptions } from "./meta";
-import { LOADER_STAMP, stampLoader } from "./stamps";
+import { LOADER_STAMP, stampLoader } from "./content-proxy/stamps";
 
 describe("fieldFromZod", () => {
 	test("maps string + label meta to Decap string widget", () => {

@@ -40,20 +40,20 @@ await Promise.all([
 		entryPoints: [join(root, "src/astro.ts")],
 		outfile: join(dist, "astro.js"),
 	}),
-	// Emit / Vite resolve these as concrete files; bundle local imports (meta, stamps).
+	// Emit / Vite resolve these as concrete files; bundle local imports (stamps, helpers).
 	esbuild.build({
 		...shared,
 		entryPoints: [
-			join(root, "src/shims/astro-loaders.ts"),
-			join(root, "src/shims/astro-content.ts"),
+			join(root, "src/content-proxy/shims/astro-loaders.ts"),
+			join(root, "src/content-proxy/shims/astro-content.ts"),
 		],
-		outdir: join(dist, "shims"),
+		outdir: join(dist, "content-proxy/shims"),
 	}),
-	// Boot `astro:content` proxy imports fieldOptions from this sibling module.
+	// Boot live `astro:content` proxy imports stamp helpers from this module.
 	esbuild.build({
 		...shared,
-		entryPoints: [join(root, "src/meta.ts")],
-		outfile: join(dist, "meta.js"),
+		entryPoints: [join(root, "src/content-proxy/stamp-helpers.ts")],
+		outfile: join(dist, "content-proxy/stamp-helpers.js"),
 	}),
 ]);
 

@@ -10,7 +10,7 @@ import { mkdirSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import * as esbuild from "esbuild";
-import { shimPaths } from "../content-paths";
+import { shimPaths } from "../content-proxy/emit";
 
 export async function importBundledContentConfig<
 	T extends Record<string, unknown>,

@@ -4,11 +4,11 @@ import { createConnection } from "node:net";
 import { resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
+import { resolveContentConfigPath } from "./content-paths";
 import {
-	resolveContentConfigPath,
 	viteAliasesForBoot,
 	vitePluginsForBoot,
-} from "./content-paths";
+} from "./content-proxy/boot";
 import { missingDecapServerMessage, resolveDecapServer } from "./decap-server";
 
 const DECAP_SERVER_PORT = 8081;

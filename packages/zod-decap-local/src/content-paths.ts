@@ -1,10 +1,9 @@
 /**
- * Content-config path discovery + Vite boot aliases / plugins (no esbuild).
+ * Content-config path discovery (Astro app root → content.config file).
+ * Boot / emit Astro content proxy adapters live under `./content-proxy/`.
  */
 import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { astroContentBootProxy } from "./vite-astro-content-proxy";
+import { join, resolve } from "node:path";
 
 const CONTENT_CONFIG_CANDIDATES = [
 	"src/content.config.ts",
@@ -25,33 +24,4 @@ export function resolveContentConfigPath(
 	throw new Error(
 		`No content config found under ${root} (expected src/content.config.ts). Pass contentConfig to zodDecap.`,
 	);
-}
-
-export function shimPaths() {
-	const base = dirname(fileURLToPath(import.meta.url));
-	const pick = (name: string) => {
-		const js = join(base, "shims", `${name}.js`);
-		const ts = join(base, "shims", `${name}.ts`);
-		if (existsSync(js)) return js;
-		if (existsSync(ts)) return ts;
-		throw new Error(`Missing shim ${name} under ${base}/shims`);
-	};
-	return {
-		loaders: pick("astro-loaders"),
-		content: pick("astro-content"),
-	};
-}
-
-/** Boot-time aliases for `astro/loaders` (stamp glob/file inputs). */
-export function viteAliasesForBoot(): {
-	find: string | RegExp;
-	replacement: string;
-}[] {
-	const { loaders } = shimPaths();
-	return [{ find: /^astro\/loaders$/, replacement: loaders }];
-}
-
-/** Boot-time Vite plugins — live `astro:content` proxy for reference/image meta. */
-export function vitePluginsForBoot() {
-	return [astroContentBootProxy()];
 }

@@ -1,11 +1,11 @@
 /**
- * Boot-time Vite proxy for Astro’s virtual `astro:content`.
- * Re-exports the real module; wraps `reference` / function-schema `image()`
- * with Decap field meta without replacing Astro validators.
+ * Boot adapter: Vite alias for stamped loaders + live `astro:content` proxy.
+ * Preserves Astro validators; stamps relation / image meta for Decap emit.
  */
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { shimPaths } from "./emit";
 
 const PROXY_ID = "\0zod-decap-local/astro-content-proxy";
 const SKIP = "zod-decap-astro-content-proxy";
@@ -22,14 +22,22 @@ type PluginContext = {
 	) => Promise<{ id: string } | null>;
 };
 
-function resolveMetaModuleHref(): string {
+/**
+ * Resolve stamp-helpers for the virtual proxy module.
+ * When bundled into `dist/astro.js`, helpers live at `dist/content-proxy/stamp-helpers.js`.
+ */
+function resolveStampHelpersHref(): string {
 	const base = dirname(fileURLToPath(import.meta.url));
-	const js = join(base, "meta.js");
-	const ts = join(base, "meta.ts");
-	const file = existsSync(js) ? js : ts;
-	if (!existsSync(file)) {
+	const candidates = [
+		join(base, "content-proxy", "stamp-helpers.js"),
+		join(base, "content-proxy", "stamp-helpers.ts"),
+		join(base, "stamp-helpers.js"),
+		join(base, "stamp-helpers.ts"),
+	];
+	const file = candidates.find((p) => existsSync(p));
+	if (!file) {
 		throw new Error(
-			`zod-decap-local meta module missing under ${base}. Run \`bun run build\`.`,
+			`zod-decap-local stamp-helpers missing near ${base}. Run \`bun run build\`.`,
 		);
 	}
 	return pathToFileURL(file).href;
@@ -62,10 +70,10 @@ export function astroContentBootProxy() {
 		load(id: string) {
 			if (id !== PROXY_ID || !realId) return;
 			const real = JSON.stringify(realId);
-			const metaHref = JSON.stringify(resolveMetaModuleHref());
+			const helpersHref = JSON.stringify(resolveStampHelpersHref());
 			return `
 import * as __real from ${real};
-import { fieldOptions } from ${metaHref};
+import { stampRelationSchema, stampImageSchema } from ${helpersHref};
 
 export const z = __real.z;
 export const render = __real.render;
@@ -79,16 +87,7 @@ export const getLiveEntry = __real.getLiveEntry;
 export const defineLiveCollection = __real.defineLiveCollection;
 
 export function reference(collection) {
-	const schema = __real.reference(collection);
-	if (schema && typeof schema.meta === "function") {
-		return schema.meta(
-			fieldOptions({
-				widget: "relation",
-				relation: { collection },
-			}),
-		);
-	}
-	return schema;
+	return stampRelationSchema(__real.reference(collection), collection);
 }
 
 export function defineCollection(config) {
@@ -97,13 +96,7 @@ export function defineCollection(config) {
 		return __real.defineCollection({
 			...config,
 			schema: (ctx) => {
-				const image = () => {
-					const schema = ctx.image();
-					if (schema && typeof schema.meta === "function") {
-						return schema.meta(fieldOptions({ widget: "image" }));
-					}
-					return schema;
-				};
+				const image = () => stampImageSchema(ctx.image());
 				return userSchema({ ...ctx, image });
 			},
 		});
@@ -113,4 +106,18 @@ export function defineCollection(config) {
 `;
 		},
 	};
+}
+
+/** Boot-time aliases for `astro/loaders` (stamp glob/file inputs). */
+export function viteAliasesForBoot(): {
+	find: string | RegExp;
+	replacement: string;
+}[] {
+	const { loaders } = shimPaths();
+	return [{ find: /^astro\/loaders$/, replacement: loaders }];
+}
+
+/** Boot-time Vite plugins — live `astro:content` proxy for reference/image meta. */
+export function vitePluginsForBoot() {
+	return [astroContentBootProxy()];
 }

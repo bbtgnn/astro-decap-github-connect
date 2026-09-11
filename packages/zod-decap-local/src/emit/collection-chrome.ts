@@ -4,7 +4,7 @@
 import type { Loader } from "astro/loaders";
 import type { z } from "zod";
 import type { CollectionOptions, DecapMeta } from "../meta";
-import { getLoaderStamp, type LoaderStamp } from "../stamps";
+import { getLoaderStamp, type LoaderStamp } from "../content-proxy/stamps";
 import {
 	assertNoRefs,
 	collectionOptionsOf,

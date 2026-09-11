@@ -3,11 +3,11 @@
  * `defineCollection` is a passthrough; `reference` is stamped for Decap emit.
  * Function-schema `image()` is materialized in `load-content-config` via
  * `astroImageSchema()` (Astro object shape → Decap image widget).
- * Live `astro:content` at boot is wrapped by `vite-astro-content-proxy.ts`.
+ * Live `astro:content` at boot is wrapped by the boot adapter (`boot.ts`).
  */
 import type { BaseSchema, CollectionConfig } from "astro/content/config";
 import { z } from "zod";
-import { fieldOptions } from "../meta";
+import { relationFieldMeta } from "../stamp-helpers";
 
 export { z };
 
@@ -19,10 +19,5 @@ export function defineCollection<S extends BaseSchema>(
 
 /** Astro-native relation → stamped Decap relation (emit graph). */
 export function reference(collection: string) {
-	return z.string().meta(
-		fieldOptions({
-			widget: "relation",
-			relation: { collection },
-		}),
-	);
+	return z.string().meta(relationFieldMeta(collection));
 }
