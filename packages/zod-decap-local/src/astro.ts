@@ -1,7 +1,7 @@
 import { resolve as resolvePath } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { AstroIntegration } from "astro";
-import { syncVendoredCms } from "./admin-assets";
+import { publishAdmin } from "./admin-assets";
 import {
 	type CollectionSpec,
 	type WriteDecapConfigOptions,
@@ -9,9 +9,8 @@ import {
 } from "./codegen";
 import {
 	DEFAULT_DECAP_PROXY_PORT,
+	alignedLocalBackendUrl,
 	ensureLocalDecapSession,
-	getLocalDecapSessionPort,
-	localBackendUrl,
 	type EnsureResult,
 } from "./session";
 
@@ -128,24 +127,25 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 				const root = fileURLToPath(config.root);
 				projectRoot = root;
 
-				const assets = syncVendoredCms({
+				const assets = publishAdmin({
 					root,
+					base: config.base,
 					outFile: options.outFile,
 				});
 				updateConfig({
 					vite: {
 						define: {
-							"import.meta.env.PUBLIC_ZOD_DECAP_CONFIG_PATH": JSON.stringify(
-								assets.configPublicPath,
+							"import.meta.env.PUBLIC_ZOD_DECAP_CONFIG_HREF": JSON.stringify(
+								assets.configHref,
 							),
-							"import.meta.env.PUBLIC_ZOD_DECAP_CMS_PATH": JSON.stringify(
-								assets.cmsPublicPath,
+							"import.meta.env.PUBLIC_ZOD_DECAP_CMS_HREF": JSON.stringify(
+								assets.cmsHref,
 							),
 						},
 					},
 				});
 				logger.info(
-					`Synced vendored Decap CMS → public/${assets.cmsPublicPath}`,
+					`Published Decap admin assets → ${assets.cmsHref}`,
 				);
 
 				injectRoute({
@@ -157,13 +157,13 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 					void (async () => {
 						const result = await ensureLocalDecapSession({
 							cwd: root,
-							alignConfig: (port) => {
+							alignConfig: (backendUrl) => {
 								const written = writeDecapConfig(
-									writeOpts(root, undefined, localBackendUrl(port)),
+									writeOpts(root, undefined, backendUrl),
 								);
 								if (written.wrote) {
 									logger.info(
-										`Wrote ${options.outFile ?? "public/admin/config.yml"} (proxy :${port})`,
+										`Wrote ${options.outFile ?? "public/admin/config.yml"} (proxy aligned)`,
 									);
 								}
 							},
@@ -206,13 +206,11 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 					if (!hit) return;
 					try {
 						const collections = await loadCollectionSchemas(primary);
-						const port =
-							getLocalDecapSessionPort() ?? DEFAULT_DECAP_PROXY_PORT;
 						const result = writeDecapConfig(
 							writeOpts(
 								projectRoot,
 								collections,
-								localBackendUrl(port),
+								alignedLocalBackendUrl(),
 							),
 						);
 						if (result.wrote) {

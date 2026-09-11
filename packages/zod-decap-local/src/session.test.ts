@@ -2,6 +2,7 @@ import { createServer } from "node:net";
 import { afterEach, describe, expect, test } from "bun:test";
 import {
 	DEFAULT_DECAP_PROXY_PORT,
+	alignedLocalBackendUrl,
 	ensureLocalDecapSession,
 	localBackendUrl,
 	pickProxyPort,
@@ -17,6 +18,12 @@ describe("localBackendUrl", () => {
 	test("points Decap at the proxy API", () => {
 		expect(localBackendUrl(8081)).toBe("http://127.0.0.1:8081/api/v1");
 		expect(localBackendUrl(9090)).toBe("http://127.0.0.1:9090/api/v1");
+	});
+});
+
+describe("alignedLocalBackendUrl", () => {
+	test("is not ready until a session owns a port", () => {
+		expect(alignedLocalBackendUrl()).toBeUndefined();
 	});
 });
 
@@ -40,7 +47,7 @@ describe("pickProxyPort", () => {
 
 describe("ensureLocalDecapSession", () => {
 	test("aligns config then starts and awaits ready", async () => {
-		const aligned: number[] = [];
+		const aligned: string[] = [];
 		const fakeServer = createServer((_req, res) => {
 			res.end("ok");
 		});
@@ -54,8 +61,8 @@ describe("ensureLocalDecapSession", () => {
 		});
 		const result = await ensureLocalDecapSession({
 			cwd: process.cwd(),
-			alignConfig: (port) => {
-				aligned.push(port);
+			alignConfig: (backendUrl) => {
+				aligned.push(backendUrl);
 			},
 			readyTimeoutMs: 500,
 			deps: {
@@ -81,24 +88,28 @@ describe("ensureLocalDecapSession", () => {
 			},
 		});
 
-		expect(aligned).toEqual([listenPort]);
+		expect(aligned).toEqual([localBackendUrl(listenPort)]);
 		expect(result).toMatchObject({
 			status: "started",
 			port: listenPort,
 			version: "3.11.0",
 		});
+		expect(alignedLocalBackendUrl()).toBe(localBackendUrl(listenPort));
 
 		const reused = await ensureLocalDecapSession({
 			cwd: process.cwd(),
-			alignConfig: (port) => {
-				aligned.push(port);
+			alignConfig: (backendUrl) => {
+				aligned.push(backendUrl);
 			},
 			deps: {
 				isPortOpen: async () => true,
 			},
 		});
 		expect(reused.status).toBe("reused");
-		expect(aligned).toEqual([listenPort, listenPort]);
+		expect(aligned).toEqual([
+			localBackendUrl(listenPort),
+			localBackendUrl(listenPort),
+		]);
 
 		stopLocalDecapSession();
 		await new Promise<void>((resolve) => fakeServer.close(() => resolve()));

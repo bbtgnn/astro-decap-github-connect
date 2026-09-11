@@ -1,21 +1,12 @@
 ---
 /**
- * Thin Decap shell. Config + CMS script URLs come from the integration
- * (`BASE_URL` + paths beside generated config.yml). Vendored CMS — no CDN.
+ * Thin Decap shell. Final config + CMS hrefs are bound by `publishAdmin`
+ * (Astro base already applied). Vendored CMS — no CDN.
  */
-const base = import.meta.env.BASE_URL;
-const configPath =
-	import.meta.env.PUBLIC_ZOD_DECAP_CONFIG_PATH ?? "admin/config.yml";
-const cmsPath =
-	import.meta.env.PUBLIC_ZOD_DECAP_CMS_PATH ?? "admin/decap-cms.js";
-
-function withBase(publicPath: string): string {
-	const b = base.endsWith("/") ? base : `${base}/`;
-	return `${b}${publicPath.replace(/^\//, "")}`;
-}
-
-const configHref = withBase(configPath);
-const cmsHref = withBase(cmsPath);
+const configHref =
+	import.meta.env.PUBLIC_ZOD_DECAP_CONFIG_HREF ?? "/admin/config.yml";
+const cmsHref =
+	import.meta.env.PUBLIC_ZOD_DECAP_CMS_HREF ?? "/admin/decap-cms.js";
 ---
 
 <!doctype html>

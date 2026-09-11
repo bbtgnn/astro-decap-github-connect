@@ -22,7 +22,8 @@ type SessionState = {
 	signalsRegistered?: boolean;
 };
 
-export type AlignConfig = (port: number) => void | Promise<void>;
+/** Align emitted YAML to the session proxy. Receives the API URL, not a raw port. */
+export type AlignConfig = (backendUrl: string) => void | Promise<void>;
 
 export type EnsureResult =
 	| { status: "started"; port: number; version: string; warn?: string }
@@ -65,6 +66,16 @@ export function localBackendUrl(
 	host = "127.0.0.1",
 ): string {
 	return `http://${host}:${port}/api/v1`;
+}
+
+/**
+ * Proxy API URL when the session has chosen a port; otherwise not ready.
+ * Watch/regen must not invent `:8081` — call this instead of guessing.
+ */
+export function alignedLocalBackendUrl(): string | undefined {
+	const port = sessionState().port;
+	if (port == null) return undefined;
+	return localBackendUrl(port);
 }
 
 export function isAlive(proc: ChildProcess | undefined): boolean {
@@ -154,7 +165,7 @@ export function stopLocalDecapSession(): void {
 }
 
 /**
- * Ensure a local Decap proxy for `cwd`. Calls `alignConfig(port)` after choosing
+ * Ensure a local Decap proxy for `cwd`. Calls `alignConfig(backendUrl)` after choosing
  * the port and before spawn so YAML and process never disagree.
  */
 export async function ensureLocalDecapSession(options: {
@@ -175,7 +186,7 @@ export async function ensureLocalDecapSession(options: {
 	const open = deps.isPortOpen ?? isPortOpen;
 
 	if (isAlive(state.proc) && state.port != null) {
-		await alignConfig(state.port);
+		await alignConfig(localBackendUrl(state.port));
 		return {
 			status: "reused",
 			port: state.port,
@@ -198,7 +209,7 @@ export async function ensureLocalDecapSession(options: {
 	}
 
 	try {
-		await alignConfig(port);
+		await alignConfig(localBackendUrl(port));
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
 		return {

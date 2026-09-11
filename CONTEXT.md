@@ -9,8 +9,8 @@ Zod collection schemas in the consumer app (fixture: `src/lib/schemas.ts`), with
 _Avoid_: treating `config.yml` as source of truth
 
 **Decap editor**:
-Temporary admin shell injected by `zodDecap` (respects Astro `base` + generated config URL). Loads a vendored pinned Decap CMS browser build and writes the working tree through `local_backend` + the local Decap session. Not gated on session-ready UI.
-_Avoid_: GitHub OAuth, CMS server, CDN script tags, shared core with `@cms/*`; bundling Decap into the site app graph
+Temporary admin shell injected by `zodDecap`. `publishAdmin` syncs the vendored CMS beside `config.yml` and binds final config/script hrefs (Astro `base` already applied). Writes the working tree through `local_backend` + the local Decap session. Not gated on session-ready UI.
+_Avoid_: GitHub OAuth, CMS server, CDN script tags, path/env round-trips in the shell, shared core with `@cms/*`; bundling Decap into the site app graph
 
 **Codegen**:
 One-way Zod → `public/admin/config.yml` inside `zod-decap-local` (`buildDecapConfig` / `writeDecapConfig`).
@@ -21,8 +21,8 @@ _Avoid_: bidirectional sync, hand-maintained YAML
 _Avoid_: fat CMS platform features; embedding proxy lifecycle in the integration hook
 
 **Local Decap session**:
-Package-private lifecycle for the pinned `decap-server` proxy: ensure / reuse / stop / ready at the app working-tree `cwd` (binary resolved from the library). Prefers proxy port 8081; if that port is busy and not owned, picks a free port and aligns `local_backend.url` before spawn.
-_Avoid_: soft-adopting a stranger on the port; spawning without aligning config to the chosen port; public start/stop for apps; absorbing pin resolve into this term
+Package-private lifecycle for the pinned `decap-server` proxy: ensure / reuse / stop / ready at the app working-tree `cwd` (binary resolved from the library). Prefers proxy port 8081; if that port is busy and not owned, picks a free port and aligns `local_backend.url` before spawn. Exposes `alignedLocalBackendUrl()` (known or not-ready) so watch regen never invents `:8081`.
+_Avoid_: soft-adopting a stranger on the port; spawning without aligning config to the chosen port; public start/stop for apps; absorbing pin resolve into this term; adapter-side default ports for YAML
 
 **Content contract**:
 Files under `src/content/**` loaded with Astro Content Layer `glob()` / `file()`.

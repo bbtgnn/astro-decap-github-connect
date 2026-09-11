@@ -1,5 +1,6 @@
 /**
- * Publish vendored Decap CMS assets next to generated config.yml under the app `public/`.
+ * Admin publish — sync vendored CMS beside config.yml and bind shell URLs
+ * (Astro base + outFile) in one place. Callers get final hrefs, not path fragments.
  */
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -29,14 +30,30 @@ export function vendorCmsSourcePath(): string {
 	return join(vendorDir, VENDORED_CMS_FILENAME);
 }
 
+/** Join Astro `base` with a public path segment. */
+export function withBaseUrl(base: string, publicPath: string): string {
+	const b = base.endsWith("/") ? base : `${base}/`;
+	const p = publicPath.replace(/^\//, "");
+	return `${b}${p}`;
+}
+
+export type PublishAdminResult = {
+	configHref: string;
+	cmsHref: string;
+	configPublicPath: string;
+	cmsPublicPath: string;
+	copied: boolean;
+};
+
 /**
- * Copy vendored `decap-cms.js` beside the generated config under `root`.
- * Returns the public URL path (no leading slash, no `base` prefix).
+ * Copy vendored `decap-cms.js` beside the generated config and resolve
+ * config/script hrefs with Astro `base`. One call for sync + path policy.
  */
-export function syncVendoredCms(options: {
+export function publishAdmin(options: {
 	root: string;
+	base: string;
 	outFile?: string;
-}): { cmsPublicPath: string; configPublicPath: string; copied: boolean } {
+}): PublishAdminResult {
 	const outFile = options.outFile ?? "public/admin/config.yml";
 	const configPublicPath = publicUrlPathFromOutFile(outFile);
 	const cmsPublicPath = cmsPublicPathFromOutFile(outFile);
@@ -49,12 +66,11 @@ export function syncVendoredCms(options: {
 	}
 	mkdirSync(dirname(dest), { recursive: true });
 	copyFileSync(src, dest);
-	return { cmsPublicPath, configPublicPath, copied: true };
-}
-
-/** Join Astro `base` with a public path segment. */
-export function withBaseUrl(base: string, publicPath: string): string {
-	const b = base.endsWith("/") ? base : `${base}/`;
-	const p = publicPath.replace(/^\//, "");
-	return `${b}${p}`;
+	return {
+		configPublicPath,
+		cmsPublicPath,
+		configHref: withBaseUrl(options.base, configPublicPath),
+		cmsHref: withBaseUrl(options.base, cmsPublicPath),
+		copied: true,
+	};
 }

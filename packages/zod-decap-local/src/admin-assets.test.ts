@@ -1,7 +1,12 @@
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 import {
 	cmsPublicPathFromOutFile,
 	publicUrlPathFromOutFile,
+	publishAdmin,
+	vendorCmsSourcePath,
 	withBaseUrl,
 } from "./admin-assets";
 
@@ -29,5 +34,24 @@ describe("admin asset paths", () => {
 		expect(withBaseUrl("/repo", "admin/decap-cms.js")).toBe(
 			"/repo/admin/decap-cms.js",
 		);
+	});
+
+	test("publishAdmin syncs vendor and returns base-joined hrefs", () => {
+		const root = mkdtempSync(join(tmpdir(), "zod-decap-admin-"));
+		try {
+			expect(existsSync(vendorCmsSourcePath())).toBe(true);
+			const published = publishAdmin({
+				root,
+				base: "/site/",
+				outFile: "public/admin/config.yml",
+			});
+			expect(published.configHref).toBe("/site/admin/config.yml");
+			expect(published.cmsHref).toBe("/site/admin/decap-cms.js");
+			expect(
+				existsSync(join(root, "public", "admin", "decap-cms.js")),
+			).toBe(true);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
 	});
 });
