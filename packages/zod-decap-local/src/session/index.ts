@@ -206,9 +206,7 @@ export function createEditorialSession(
 			process.on("exit", stop);
 			process.on("SIGINT", stop);
 			process.on("SIGTERM", stop);
-			logger.info(
-				`Started decap-server@${resolved.version} for local_backend`,
-			);
+			logger.info(`Started decap-server@${resolved.version} for local_backend`);
 		},
 
 		attachWatch(watcher, logger) {

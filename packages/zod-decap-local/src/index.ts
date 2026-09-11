@@ -1,6 +1,6 @@
 export {
-	collectionOptions,
 	type CollectionOptions,
+	collectionOptions,
 	type DecapWidget,
 	type FieldOptions,
 	fieldOptions,

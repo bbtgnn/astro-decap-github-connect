@@ -59,12 +59,18 @@ export const authorsSchema = z
 			.enum(["editor", "writer", "guest"])
 			.default("writer")
 			.meta(fieldOptions({ label: "Role" })),
-		bio: z.string().meta(fieldOptions({ label: "Bio" })).optional(),
+		bio: z
+			.string()
+			.meta(fieldOptions({ label: "Bio" }))
+			.optional(),
 		avatar: z
 			.string()
 			.meta(fieldOptions({ widget: "image", label: "Avatar" }))
 			.optional(),
-		order: z.number().default(0).meta(fieldOptions({ label: "Sort order" })),
+		order: z
+			.number()
+			.default(0)
+			.meta(fieldOptions({ label: "Sort order" })),
 		social: z
 			.object({
 				website: z

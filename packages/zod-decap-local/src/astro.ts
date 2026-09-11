@@ -6,10 +6,7 @@
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
 import { resolveContentConfigPath } from "./content-paths";
-import {
-	viteAliasesForBoot,
-	vitePluginsForBoot,
-} from "./content-proxy/boot";
+import { viteAliasesForBoot, vitePluginsForBoot } from "./content-proxy/boot";
 import {
 	createEditorialSession,
 	type EditorialSessionOptions,

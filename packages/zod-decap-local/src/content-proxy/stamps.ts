@@ -1,6 +1,5 @@
 /** Loader stamp symbol — passthrough wrap of Astro `glob` / `file`. */
-import type { Loader } from "astro/loaders";
-import type { glob as AstroGlob } from "astro/loaders";
+import type { glob as AstroGlob, Loader } from "astro/loaders";
 
 export const LOADER_STAMP = Symbol.for("zod-decap-local.loaderStamp");
 

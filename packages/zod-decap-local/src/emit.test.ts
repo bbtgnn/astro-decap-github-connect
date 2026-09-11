@@ -1,17 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import {
-	buildDecapConfig,
-	collectionFromSchema,
-	fieldFromZod,
-} from "./emit";
+import { LOADER_STAMP, stampLoader } from "./content-proxy/stamps";
+import { buildDecapConfig, collectionFromSchema, fieldFromZod } from "./emit";
 import {
 	astroImageSchema,
 	decapPathToAstroImage,
 	imagePathForDecap,
 } from "./image-bridge";
 import { collectionOptions, fieldOptions } from "./meta";
-import { LOADER_STAMP, stampLoader } from "./content-proxy/stamps";
 
 describe("fieldFromZod", () => {
 	test("maps string + label meta to Decap string widget", () => {
@@ -27,7 +23,10 @@ describe("fieldFromZod", () => {
 	test("marks optional fields required: false", () => {
 		const field = fieldFromZod(
 			"description",
-			z.string().meta(fieldOptions({ label: "Description" })).optional(),
+			z
+				.string()
+				.meta(fieldOptions({ label: "Description" }))
+				.optional(),
 		);
 		expect(field.required).toBe(false);
 	});
@@ -35,7 +34,10 @@ describe("fieldFromZod", () => {
 	test("emits boolean default", () => {
 		const field = fieldFromZod(
 			"draft",
-			z.boolean().default(false).meta(fieldOptions({ label: "Draft" })),
+			z
+				.boolean()
+				.default(false)
+				.meta(fieldOptions({ label: "Draft" })),
 		);
 		expect(field.widget).toBe("boolean");
 		expect(field.default).toBe(false);
@@ -112,10 +114,7 @@ describe("fieldFromZod", () => {
 
 	test("rejects incompatible widget / Zod kind", () => {
 		expect(() =>
-			fieldFromZod(
-				"n",
-				z.number().meta(fieldOptions({ widget: "markdown" })),
-			),
+			fieldFromZod("n", z.number().meta(fieldOptions({ widget: "markdown" }))),
 		).toThrow(/incompatible/);
 	});
 });

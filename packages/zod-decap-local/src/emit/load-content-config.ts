@@ -4,7 +4,7 @@
  * Flow: resolve path → bundle/import with shims → materialize schemas → list.
  */
 import type { Loader } from "astro/loaders";
-import { z } from "zod";
+import type { z } from "zod";
 import { resolveContentConfigPath } from "../content-paths";
 import { astroImageSchema } from "../image-bridge";
 import { importBundledContentConfig } from "./import-bundled-content-config";
@@ -15,9 +15,7 @@ import { importBundledContentConfig } from "./import-bundled-content-config";
  */
 export type EmitCollectionConfig = {
 	loader?: Loader;
-	schema?:
-		| z.ZodType
-		| ((ctx: { image: () => z.ZodType }) => z.ZodType);
+	schema?: z.ZodType | ((ctx: { image: () => z.ZodType }) => z.ZodType);
 };
 
 export type LoadedCollection = {

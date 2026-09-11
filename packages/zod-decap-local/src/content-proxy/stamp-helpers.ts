@@ -31,7 +31,9 @@ export function stampRelationSchema<T extends MetaCapable>(
 }
 
 /** Stamp image meta onto an existing schema (boot wrap of function-schema `image()`). */
-export function stampImageSchema<T extends MetaCapable>(schema: T): T | unknown {
+export function stampImageSchema<T extends MetaCapable>(
+	schema: T,
+): T | unknown {
 	if (schema && typeof schema.meta === "function") {
 		return schema.meta(imageFieldMeta());
 	}

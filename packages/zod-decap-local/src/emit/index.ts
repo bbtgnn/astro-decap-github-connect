@@ -14,11 +14,11 @@ import { stringify } from "yaml";
 import { collectionFromSchema } from "./collection-chrome";
 import type { LoadedCollection } from "./load-content-config";
 
-export type { LoadedCollection };
 export type { DecapCollection } from "./collection-chrome";
 export { collectionFromSchema } from "./collection-chrome";
 export type { DecapField } from "./json-schema-to-fields";
 export { fieldFromJsonSchema, fieldFromZod } from "./json-schema-to-fields";
+export type { LoadedCollection };
 
 export type BuildDecapConfigOptions = {
 	collections: LoadedCollection[];
