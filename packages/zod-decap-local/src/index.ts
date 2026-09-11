@@ -6,10 +6,3 @@ export {
 	fieldOptions,
 	type RelationOptions,
 } from "./meta";
-export {
-	astroImageSchema,
-	type AstroImageData,
-	type AstroImageFormat,
-	decapPathToAstroImage,
-	imagePathForDecap,
-} from "./image-bridge";

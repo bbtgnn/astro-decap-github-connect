@@ -45,8 +45,8 @@ Files under `src/content/**` (or loader bases) loaded with Astro Content Layer.
 _Avoid_: custom Decap content adapter / remote loader
 
 **Image bridge**:
-Decap edits public path strings; Astro `image()` is an object (`src`/`width`/`height`/`format`). Package helpers: `astroImageSchema`, `imagePathForDecap`, `decapPathToAstroImage`. Emit flattens the object shape to a Decap `image` widget.
-_Avoid_: full asset-pipeline parity with import ids / `_astro` URLs
+Decap edits public path strings; apps usually use `z.string()` + `fieldOptions({ widget: "image" })`. Astro function-schema `image()` is an object (`src`/`width`/`height`/`format`); emit flattens that shape to a Decap `image` widget internally.
+_Avoid_: full asset-pipeline parity with import ids / `_astro` URLs; advertising image-bridge helpers as public API
 
 **Write-back (stopgap sense)**:
 Decap → `decap-server` → local files → refresh / rebuild.
