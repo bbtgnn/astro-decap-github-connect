@@ -1,9 +1,10 @@
 /**
- * Content-config path discovery + Vite boot aliases (no esbuild).
+ * Content-config path discovery + Vite boot aliases / plugins (no esbuild).
  */
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { astroContentBootProxy } from "./vite-astro-content-proxy";
 
 const CONTENT_CONFIG_CANDIDATES = [
 	"src/content.config.ts",
@@ -36,11 +37,16 @@ export function shimPaths() {
 	return { loaders, content };
 }
 
-/** Boot-time aliases — do not replace Astro’s virtual `astro:content`. */
+/** Boot-time aliases for `astro/loaders` (stamp glob/file inputs). */
 export function viteAliasesForBoot(): {
 	find: string | RegExp;
 	replacement: string;
 }[] {
 	const { loaders } = shimPaths();
 	return [{ find: /^astro\/loaders$/, replacement: loaders }];
+}
+
+/** Boot-time Vite plugins — live `astro:content` proxy for reference/image meta. */
+export function vitePluginsForBoot() {
+	return [astroContentBootProxy()];
 }

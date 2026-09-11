@@ -214,3 +214,42 @@ describe("astro image bridge", () => {
 		});
 	});
 });
+
+describe("writeDecapConfig skip-unchanged", () => {
+	test("returns wrote:false when yaml matches disk", async () => {
+		const { mkdtempSync, writeFileSync, mkdirSync, readFileSync } =
+			await import("node:fs");
+		const { join } = await import("node:path");
+		const { tmpdir } = await import("node:os");
+		const { writeDecapConfig } = await import("./codegen");
+
+		const root = mkdtempSync(join(tmpdir(), "zod-decap-"));
+		mkdirSync(join(root, "public/admin"), { recursive: true });
+		const collections = [
+			{
+				name: "posts",
+				schema: z
+					.object({
+						title: z.string().meta(fieldOptions({ label: "Title" })),
+					})
+					.meta(
+						collectionOptions({
+							folder: "src/content/posts",
+							extension: "md",
+							format: "frontmatter",
+						}),
+					),
+			},
+		];
+		const first = writeDecapConfig({ root, collections });
+		expect(first.wrote).toBe(true);
+		const second = writeDecapConfig({ root, collections });
+		expect(second.wrote).toBe(false);
+		expect(readFileSync(join(root, "public/admin/config.yml"), "utf8")).toBe(
+			first.yaml,
+		);
+		writeFileSync(join(root, "public/admin/config.yml"), "stale\n");
+		const third = writeDecapConfig({ root, collections });
+		expect(third.wrote).toBe(true);
+	});
+});

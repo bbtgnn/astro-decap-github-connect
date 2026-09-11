@@ -10,7 +10,7 @@
 		"./admin": "./src/admin.astro"
 	},
 	"bin": {
-		"zod-decap-local": "./src/cli.ts"
+		"zod-decap-local": "./src/bin.mjs"
 	},
 	"scripts": {
 		"test": "bun test src",

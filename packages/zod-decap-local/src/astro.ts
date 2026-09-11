@@ -3,15 +3,16 @@ import { createConnection } from "node:net";
 import { resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
+import { ensureCliBundle } from "./cli-bundle";
 import { missingDecapServerMessage, resolveDecapServer } from "./decap-server";
 import {
 	resolveContentConfigPath,
 	viteAliasesForBoot,
+	vitePluginsForBoot,
 } from "./content-paths";
 
 const DECAP_SERVER_PORT = 8081;
 const GLOBAL_DECAP = Symbol.for("zod-decap-local.decapProc");
-const CLI = fileURLToPath(new URL("./cli.ts", import.meta.url));
 
 type DecapGlobal = { proc?: ChildProcess };
 
@@ -37,16 +38,13 @@ function isPortOpen(port: number, host = "127.0.0.1"): Promise<boolean> {
 	});
 }
 
-function bunBin(): string {
-	return typeof process.execPath === "string" &&
-		process.execPath.includes("bun")
-		? process.execPath
-		: "bun";
-}
-
-/** Run Decap emit in a child Bun process (avoids Vite module-runner). */
-function runEmitCli(root: string, options: ZodDecapOptions): void {
-	const args = [CLI, "--root", root];
+/** Run Decap emit in a child process (same runtime as Astro; avoids Vite module-runner). */
+function runEmitCli(
+	root: string,
+	options: ZodDecapOptions,
+): { wrote: boolean } {
+	const entry = ensureCliBundle();
+	const args = [entry, "--root", root];
 	if (options.contentConfig) {
 		args.push("--content-config", options.contentConfig);
 	}
@@ -54,7 +52,7 @@ function runEmitCli(root: string, options: ZodDecapOptions): void {
 	if (options.mediaFolder) args.push("--media-folder", options.mediaFolder);
 	if (options.publicFolder) args.push("--public-folder", options.publicFolder);
 
-	const child = spawnSync(bunBin(), args, {
+	const child = spawnSync(process.execPath, args, {
 		cwd: root,
 		encoding: "utf8",
 		env: process.env,
@@ -64,6 +62,8 @@ function runEmitCli(root: string, options: ZodDecapOptions): void {
 			(child.stderr || child.stdout || "Decap emit failed").trim(),
 		);
 	}
+	const out = `${child.stdout ?? ""}\n${child.stderr ?? ""}`;
+	return { wrote: /Wrote config\.yml/.test(out) };
 }
 
 export type ZodDecapOptions = {
@@ -135,12 +135,17 @@ export function zodDecap(options: ZodDecapOptions = {}): AstroIntegration {
 						resolve: {
 							alias: viteAliasesForBoot(),
 						},
+						plugins: vitePluginsForBoot(),
 					},
 				});
 
 				try {
-					runEmitCli(root, options);
-					logger.info(`Wrote ${options.outFile ?? "public/admin/config.yml"}`);
+					const { wrote } = runEmitCli(root, options);
+					if (wrote) {
+						logger.info(
+							`Wrote ${options.outFile ?? "public/admin/config.yml"}`,
+						);
+					}
 				} catch (err) {
 					const msg = err instanceof Error ? err.message : String(err);
 					logger.error(`Decap emit failed: ${msg}`);
@@ -232,10 +237,12 @@ export function zodDecap(options: ZodDecapOptions = {}): AstroIntegration {
 					);
 					if (!hit) return;
 					try {
-						runEmitCli(projectRoot, options);
-						logger.info(
-							`Regenerated ${options.outFile ?? "public/admin/config.yml"} (schema watch)`,
-						);
+						const { wrote } = runEmitCli(projectRoot, options);
+						if (wrote) {
+							logger.info(
+								`Regenerated ${options.outFile ?? "public/admin/config.yml"} (schema watch)`,
+							);
+						}
 					} catch (err) {
 						const msg = err instanceof Error ? err.message : String(err);
 						logger.error(`Schema watch regenerate failed: ${msg}`);

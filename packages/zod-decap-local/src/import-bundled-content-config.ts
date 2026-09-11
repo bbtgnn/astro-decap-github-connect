@@ -6,7 +6,7 @@
 import * as esbuild from "esbuild";
 import { mkdirSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { shimPaths } from "./content-paths";
 
 export async function importBundledContentConfig<T extends Record<string, unknown>>(
@@ -25,6 +25,9 @@ export async function importBundledContentConfig<T extends Record<string, unknow
 	);
 	mkdirSync(dirname(outfile), { recursive: true });
 
+	// Package root (stable when this module is bundled beside `src/`).
+	const pkgDir = fileURLToPath(new URL("..", import.meta.url));
+
 	await esbuild.build({
 		absWorkingDir: options.root,
 		entryPoints: [options.contentConfigPath],
@@ -38,6 +41,20 @@ export async function importBundledContentConfig<T extends Record<string, unknow
 			{
 				name: "zod-decap-aliases",
 				setup(build) {
+					// Bundle workspace package (Node cannot load extensionless .ts exports).
+					build.onResolve({ filter: /^zod-decap-local$/ }, () => ({
+						path: join(pkgDir, "src/index.ts"),
+					}));
+					build.onResolve({ filter: /^zod-decap-local\/(.+)$/ }, (args) => {
+						const sub = args.path.slice("zod-decap-local/".length);
+						const file =
+							sub === "astro"
+								? "src/astro.ts"
+								: sub === "admin"
+									? "src/admin.astro"
+									: `src/${sub}.ts`;
+						return { path: join(pkgDir, file) };
+					});
 					build.onResolve({ filter: /^astro:content$/ }, () => ({
 						path: content,
 					}));

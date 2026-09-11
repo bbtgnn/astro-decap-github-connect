@@ -1,9 +1,9 @@
 /**
- * Codegen / CLI shim for `astro:content`.
+ * Emit-graph shim for `astro:content` (esbuild rewrite during Decap emit).
  * `defineCollection` is a passthrough; `reference` is stamped for Decap emit.
  * Function-schema `image()` is materialized in `load-content-config` via
  * `astroImageSchema()` (Astro object shape → Decap image widget).
- * Not used as Astro’s live virtual module — only in the emit Vite graph.
+ * Live `astro:content` at boot is wrapped by `vite-astro-content-proxy.ts`.
  */
 import type { BaseSchema, CollectionConfig } from "astro/content/config";
 import { z } from "zod";

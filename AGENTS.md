@@ -6,6 +6,7 @@
 - **Fixture:** `packages/fixture` — Astro dogfood site (content config + schemas + content)
 - **Tooling:** Bun workspaces + catalog, Biome (tabs). Mirror `astro-dev-cms-gui` style.
 - **Never hand-edit** `packages/fixture/public/admin/config.yml`. CI runs `codegen:check`.
+- **Emit runtime:** integration spawns Decap emit with `process.execPath` + bundled CLI (`bin.mjs`); Bun is monorepo-default, not required for consumers.
 
 ## Source of truth (per app)
 

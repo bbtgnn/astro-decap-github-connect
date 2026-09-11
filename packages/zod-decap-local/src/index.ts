@@ -1,4 +1,3 @@
-export { type ZodDecapOptions, zodDecap } from "./astro";
 export {
 	collectionOptions,
 	type CollectionOptions,

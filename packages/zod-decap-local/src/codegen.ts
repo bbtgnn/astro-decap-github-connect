@@ -69,18 +69,23 @@ export function writeDecapConfig(options: WriteDecapConfigOptions): {
 	const yaml = buildDecapConfig(options);
 	mkdirSync(dirname(outPath), { recursive: true });
 
+	let existing = "";
+	try {
+		existing = readFileSync(outPath, "utf8");
+	} catch {
+		existing = "";
+	}
+
 	if (options.check) {
-		let existing = "";
-		try {
-			existing = readFileSync(outPath, "utf8");
-		} catch {
-			existing = "";
-		}
 		if (existing !== yaml) {
 			throw new Error(
 				`${outFile} is out of date. Run astro build or regenerate.`,
 			);
 		}
+		return { yaml, wrote: false };
+	}
+
+	if (existing === yaml) {
 		return { yaml, wrote: false };
 	}
 
