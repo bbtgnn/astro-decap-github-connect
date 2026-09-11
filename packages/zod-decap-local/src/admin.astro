@@ -1,16 +1,24 @@
+---
+/**
+ * Thin Decap shell. Final config + CMS hrefs are bound by `publishAdmin`
+ * (Astro base already applied). Vendored CMS — no CDN.
+ */
+const configHref =
+	import.meta.env.PUBLIC_ZOD_DECAP_CONFIG_HREF ?? "/admin/config.yml";
+const cmsHref =
+	import.meta.env.PUBLIC_ZOD_DECAP_CMS_HREF ?? "/admin/decap-cms.js";
+---
+
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<meta name="robots" content="noindex" />
-		<link href="/admin/config.yml" type="text/yaml" rel="cms-config-url" />
+		<link href={configHref} type="text/yaml" rel="cms-config-url" />
 		<title>Content Manager</title>
 	</head>
 	<body>
-		<script
-			is:inline
-			src="https://unpkg.com/decap-cms@^3.11.0/dist/decap-cms.js"
-		></script>
+		<script is:inline src={cmsHref}></script>
 	</body>
 </html>

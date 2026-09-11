@@ -3,7 +3,7 @@
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
-	"description": "Zod → Decap config codegen + local Astro integration (stopgap)",
+	"description": "Zod → Decap config codegen + local Astro integration",
 	"exports": {
 		".": "./dist/index.js",
 		"./astro": "./dist/astro.js",
@@ -21,12 +21,13 @@
 		"check": "tsc -p ."
 	},
 	"dependencies": {
+		"decap-cms": "3.11.0",
+		"decap-server": "3.11.0",
 		"esbuild": "^0.25.0",
 		"yaml": "catalog:"
 	},
 	"peerDependencies": {
 		"astro": "^5.13.0",
-		"decap-server": "3.11.0",
 		"zod": "^4.1.5"
 	},
 	"devDependencies": {

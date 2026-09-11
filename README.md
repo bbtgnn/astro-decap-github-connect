@@ -1,4 +1,4 @@
-# Astro + Decap stopgap (local)
+# Astro + Decap (local editorial)
 
 Monorepo:
 
@@ -7,7 +7,7 @@ Monorepo:
 | `packages/zod-decap-local` | fieldOptions meta, Zod→Decap emit, Astro integration, CLI |
 | `packages/fixture` | Astro dogfood site (content config + schemas + content) |
 
-Schema owner is **plain Zod 4** (optional `.meta(fieldOptions(…))`) wired through Astro’s **`content.config` `collections`**. Decap is a temporary **local** editor via `local_backend` + `decap-server`. No parallel `collectionSchemas` list, no GitHub OAuth.
+Schema owner is **plain Zod 4** (optional `.meta(fieldOptions(…))`) wired through Astro’s **`content.config` `collections`**. Decap is a **local** editor via `local_backend` + owned `decap-server` / `decap-cms`. No parallel `collectionSchemas` list, no GitHub OAuth.
 
 ## Loop
 
@@ -30,11 +30,11 @@ Open:
 - Site: http://127.0.0.1:4321
 - Admin: http://127.0.0.1:4321/admin
 
-The fixture pins `--port 4321`. If that port is already taken, Astro binds the next free port — use that host:port for both the site and `/admin`.
+The fixture pins Astro `--port 4321`. If that port is already taken, Astro binds the next free port — use that host:port for both the site and `/admin`.
 
-`bun run dev` runs the fixture; the integration writes config and starts `decap-server`. Edits save into the working tree — no login.
+`decap-server` is pinned inside `zod-decap-local` at `3.11.0` and always listens on **`:8081`**. If something else holds 8081, `astro dev` fails — free the port and retry. `decap-cms` is copied beside `config.yml` on setup (no CDN).
 
-> `decap-server` is pinned to `3.11.0`. Install with `bun add -d decap-server@3.11.0` in the Astro app if missing.
+Schema or `content.config` edits need an **Astro restart**, then a hard refresh of `/admin`. Emit runs at config setup only.
 
 ## Consumer sketch
 
@@ -47,7 +47,6 @@ export default defineConfig({
   integrations: [
     zodDecap({
       // contentConfig auto-discovered (src/content.config.ts)
-      watchExtra: "src/lib/schemas.ts", // optional: regen when schemas change
     }),
   ],
 });
@@ -75,7 +74,7 @@ Folder/extension for Decap come from stamped `glob({ base, pattern })` in `conte
 
 - `bun run dev` — fixture Astro + local Decap
 - `bun run build` — fixture static build (regenerates YAML)
-- `bun run test` — emit unit tests
+- `bun run test` — package unit tests
 - `bun run check` — `tsc` + YAML drift guard
 - `bun run lint` / `bun run format` — Biome
 

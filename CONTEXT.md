@@ -1,6 +1,6 @@
-# CONTEXT — Decap + Astro stopgap (local)
+# CONTEXT — Decap + Astro (local editorial)
 
-Temporary **local** editorial path while a separate authoring shell lands. **Not** shared architecture with `@cms/*`.
+Local editorial path for Astro Content Layer sites. **Not** shared architecture with `@cms/*`.
 
 ## Language
 
@@ -33,15 +33,15 @@ One-way walk from content-config collections → `public/admin/config.yml` (load
 _Avoid_: bidirectional sync, hand-maintained YAML, exporting Zod walkers as the package face
 
 **Decap editor**:
-Temporary React admin SPA at `/admin` (injected by `zodDecap`) writing the working tree through `local_backend` + `decap-server`.
-_Avoid_: GitHub OAuth, CMS server, shared core with `@cms/*`
+React admin SPA at `/admin` (injected by `zodDecap`) writing the working tree through `local_backend` + owned `decap-server` / `decap-cms`.
+_Avoid_: GitHub OAuth, CMS server, shared core with `@cms/*`; loading CMS from a CDN
 
 **Editorial session**:
-Local Decap runtime owned by `session/`: emit via compiled CLI, schema-watch regen, and `decap-server` resolve/spawn/reuse/port.
-_Avoid_: burying that lifecycle inside Astro hook bodies; treating the session as a public package export
+Local Decap runtime owned by `session/`: emit via compiled CLI at config setup, and `decap-server` resolve/spawn/reuse on fixed `:8081`.
+_Avoid_: burying that lifecycle inside Astro hook bodies; treating the session as a public package export; schema-watch regen (restart Astro after schema edits)
 
 **Astro integration**:
-Thin `zodDecap` adapter: resolve paths, content-proxy Vite wiring, inject `/admin`, call the editorial session from Astro hooks.
+Thin `zodDecap` adapter: content-proxy Vite wiring, `publishAdmin` + inject `/admin`, call the editorial session from Astro hooks.
 _Avoid_: fat CMS platform features; passing a static `collections` array into the integration; owning emit/server lifecycle in the adapter
 
 **Content contract**:
@@ -52,20 +52,21 @@ _Avoid_: custom Decap content adapter / remote loader
 Decap edits public path strings; apps usually use `z.string()` + `fieldOptions({ widget: "image" })`. Astro function-schema `image()` is an object (`src`/`width`/`height`/`format`); emit flattens that shape to a Decap `image` widget internally.
 _Avoid_: full asset-pipeline parity with import ids / `_astro` URLs; advertising image-bridge helpers as public API
 
-**Write-back (stopgap sense)**:
+**Write-back**:
 Decap → `decap-server` → local files → refresh / rebuild.
-_Avoid_: conflating with authoring-shell FS write-back via `/_cms`, or remote Git commits
+_Avoid_: remote Git commits as the primary local loop
 
 ## Closed decisions
 
 - Zod → Decap YAML only; registry is Astro `collections`, not a side list
 - Plain Zod + optional `fieldOptions` / `collectionOptions`; derive widgets aggressively; hard-fail mismatched meta at emit
-- Local Decap only (`local_backend`); no GitHub OAuth in this stopgap
+- Local Decap only (`local_backend`); no GitHub OAuth
+- Owned pins: `decap-server@3.11.0` + `decap-cms@3.11.0` inside `zod-decap-local`; fixed `:8081` (stranger → fail)
+- Emit at Astro config setup; schema/content-config changes need an Astro restart (no schema watch)
 - Astro content proxy: shared stamps + boot/emit adapters (passthrough + stamp); CLI shares emit shims
 - Monorepo: `zod-decap-local` package + `fixture` app (Bun + Biome, `@cms` tooling style)
 - Media: `public/images` ↔ `/images`
 - Widget subset: string, number, boolean, datetime, select, object, list, markdown, image, relation
-- Disposable when authoring shell replaces it
 
 ## Out of scope
 
