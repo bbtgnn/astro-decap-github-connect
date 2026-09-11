@@ -1,9 +1,7 @@
 ---
 title: About
-description: What this stopgap is for.
+description: What this local Decap + Astro setup is for.
 draft: false
 ---
 
-This Astro site uses **Decap** only as a local editor. Schemas live in Zod; `public/admin/config.yml` is generated.
-
-When the authoring shell lands, this Decap path is meant to be deleted — not merged into `@cms/*`.
+This Astro site uses **Decap** as a local editor. Schemas live in Zod; `public/admin/config.yml` is generated. Editorial write-back needs `astro dev` (and `decap-server`) next to the working tree.
