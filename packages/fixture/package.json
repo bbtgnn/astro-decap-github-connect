@@ -8,7 +8,7 @@
 		"dev": "astro dev --host 127.0.0.1 --port 4321",
 		"build": "astro build",
 		"preview": "astro preview",
-		"codegen:check": "bun ../../packages/zod-decap-local/src/cli.ts --check --root . --from ./src/lib/schemas.ts"
+		"codegen:check": "bun ../../packages/zod-decap-local/src/cli.ts --check --root ."
 	},
 	"dependencies": {
 		"astro": "catalog:",

@@ -1,6 +1,5 @@
 import { defineConfig } from "astro/config";
 import { zodDecap } from "zod-decap-local/astro";
-import { collectionSchemas } from "./src/lib/schemas.ts";
 
 function withTrailingSlash(path) {
 	if (path === "/") return "/";
@@ -14,9 +13,7 @@ export default defineConfig({
 	base,
 	integrations: [
 		zodDecap({
-			collections: collectionSchemas,
-			schemaOwnerHint: "src/lib/schemas.ts",
-			watchSchemas: true,
+			watchExtra: "src/lib/schemas.ts",
 		}),
 	],
 });

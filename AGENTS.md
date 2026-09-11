@@ -2,22 +2,23 @@
 
 ## Monorepo
 
-- **Package:** `packages/zod-decap-local` — FieldUi helpers, Zod→Decap codegen, Astro integration, CLI
-- **Fixture:** `packages/fixture` — Astro dogfood site (owns schemas + content)
+- **Package:** `packages/zod-decap-local` — `fieldOptions` / `collectionOptions`, Zod→Decap emit, Astro integration, CLI
+- **Fixture:** `packages/fixture` — Astro dogfood site (content config + schemas + content)
 - **Tooling:** Bun workspaces + catalog, Biome (tabs). Mirror `astro-dev-cms-gui` style.
 - **Never hand-edit** `packages/fixture/public/admin/config.yml`. CI runs `codegen:check`.
 
 ## Source of truth (per app)
 
-- **Edit schemas:** `packages/fixture/src/lib/schemas.ts` (or consumer app)
-- **Generate:** `zodDecap` integration on `astro dev` / `astro build`, or CLI `--from`
-- Schema owner stays in the app — not inside `zod-decap-local`
+- **Registry:** `src/content.config.ts` `export const collections` (Astro Content Layer)
+- **Schemas:** plain Zod (+ optional `.meta(fieldOptions|collectionOptions)`) in the app
+- **Generate:** `zodDecap` on `astro dev` / `astro build`, or CLI `--check`
+- See `docs/adr/0001-content-config-registry-and-boot-proxies.md`
 
 ## Local editorial
 
 `bun run dev` → fixture Astro + integration-spawned `decap-server`. Config must keep `local_backend: true`. No OAuth routes.
 
-Fixture pins port **4321**; if busy, Astro takes the next free port — open `/admin` on that port. Missing `decap-server@3.11.0` should fail with an install hint (`bun add -d decap-server@3.11.0`). `watchSchemas: true` + `schemaOwnerHint` regenerates YAML on schema edits.
+Fixture pins port **4321**; if busy, Astro takes the next free port — open `/admin` on that port. Missing `decap-server@3.11.0` should fail with an install hint (`bun add -d decap-server@3.11.0`). Default watch regenerates YAML when `content.config` / `watchExtra` modules change.
 
 ## Do not
 
@@ -26,6 +27,7 @@ Fixture pins port **4321**; if busy, Astro takes the next free port — open `/a
 - Reintroduce GitHub OAuth / SSR adapter for this stopgap
 - Import or publish shared packages with `astro-dev-cms-gui` / `@cms/*`
 - Expand widget parity beyond the boring subset without an explicit ask
+- Bring back a parallel `collectionSchemas` registry
 
 ## Prove the loop
 

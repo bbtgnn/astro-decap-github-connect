@@ -5,11 +5,20 @@ import {
 	collectionFromSchema,
 	fieldFromZod,
 } from "./codegen";
-import { boolean, object, relation, text } from "./fields";
+import {
+	astroImageSchema,
+	decapPathToAstroImage,
+	imagePathForDecap,
+} from "./image-bridge";
+import { collectionOptions, fieldOptions } from "./meta";
+import { LOADER_STAMP, stampLoader } from "./stamps";
 
 describe("fieldFromZod", () => {
 	test("maps string + label meta to Decap string widget", () => {
-		const field = fieldFromZod("title", text({ label: "Title" }));
+		const field = fieldFromZod(
+			"title",
+			z.string().meta(fieldOptions({ label: "Title" })),
+		);
 		expect(field.widget).toBe("string");
 		expect(field.label).toBe("Title");
 		expect(field.name).toBe("title");
@@ -18,7 +27,7 @@ describe("fieldFromZod", () => {
 	test("marks optional fields required: false", () => {
 		const field = fieldFromZod(
 			"description",
-			text({ label: "Description" }).optional(),
+			z.string().meta(fieldOptions({ label: "Description" })).optional(),
 		);
 		expect(field.required).toBe(false);
 	});
@@ -26,20 +35,29 @@ describe("fieldFromZod", () => {
 	test("emits boolean default", () => {
 		const field = fieldFromZod(
 			"draft",
-			boolean({ label: "Draft", default: false }),
+			z.boolean().default(false).meta(fieldOptions({ label: "Draft" })),
 		);
 		expect(field.widget).toBe("boolean");
 		expect(field.default).toBe(false);
 	});
 
-	test("maps relation helper to Decap relation widget options", () => {
+	test("maps relation fieldOptions to Decap relation widget", () => {
 		const field = fieldFromZod(
 			"author",
-			relation("authors", {
-				label: "Author",
-				searchFields: ["name"],
-				displayFields: ["name"],
-			}).optional(),
+			z
+				.string()
+				.meta(
+					fieldOptions({
+						widget: "relation",
+						label: "Author",
+						relation: {
+							collection: "authors",
+							searchFields: ["name"],
+							displayFields: ["name"],
+						},
+					}),
+				)
+				.optional(),
 		);
 		expect(field).toEqual({
 			name: "author",
@@ -56,13 +74,19 @@ describe("fieldFromZod", () => {
 	test("maps nested object to Decap object widget with child fields", () => {
 		const field = fieldFromZod(
 			"social",
-			object(
-				{
-					website: text({ label: "Website" }).optional(),
-					bluesky: text({ label: "Bluesky" }).optional(),
-				},
-				{ label: "Social" },
-			).optional(),
+			z
+				.object({
+					website: z
+						.string()
+						.meta(fieldOptions({ label: "Website" }))
+						.optional(),
+					bluesky: z
+						.string()
+						.meta(fieldOptions({ label: "Bluesky" }))
+						.optional(),
+				})
+				.meta(fieldOptions({ label: "Social" }))
+				.optional(),
 		);
 		expect(field).toEqual({
 			name: "social",
@@ -85,39 +109,59 @@ describe("fieldFromZod", () => {
 			],
 		});
 	});
+
+	test("rejects incompatible widget / Zod kind", () => {
+		expect(() =>
+			fieldFromZod(
+				"n",
+				z.number().meta(fieldOptions({ widget: "markdown" })),
+			),
+		).toThrow(/incompatible/);
+	});
 });
 
 describe("collectionFromSchema", () => {
-	test("emits folder collection from collection meta + body", () => {
-		const schema = object(
-			{ title: text({ label: "Title" }) },
+	test("uses loader stamp for folder/extension and appends body", () => {
+		const schema = z
+			.object({
+				title: z.string().meta(fieldOptions({ label: "Title" })),
+			})
+			.meta(collectionOptions({ label: "Blog Posts" }));
+		const loader = stampLoader(
+			{ name: "glob-loader", load: async () => {} },
 			{
-				collection: {
-					label: "Blog Posts",
-					folder: "src/content/posts",
-					extension: "md",
-					format: "frontmatter",
-					create: true,
-				},
+				kind: "glob",
+				pattern: "**/*.{md,mdx}",
+				base: "./src/content/posts",
 			},
 		);
-		const col = collectionFromSchema("posts", schema);
+		const col = collectionFromSchema("posts", schema, loader);
 		expect(col.name).toBe("posts");
 		expect(col.label).toBe("Blog Posts");
 		expect(col.folder).toBe("src/content/posts");
+		expect(col.extension).toBe("md");
+		expect(col.format).toBe("frontmatter");
 		expect(col.fields).toEqual([
 			{ name: "title", label: "Title", widget: "string" },
 			{ name: "body", label: "Body", widget: "markdown" },
 		]);
+		expect(loader[LOADER_STAMP]?.kind).toBe("glob");
 	});
 });
 
 describe("buildDecapConfig", () => {
 	test("includes local_backend + generated banner", () => {
-		const schema = object(
-			{ title: text({ label: "Title" }) },
-			{ collection: { folder: "src/content/posts" } },
-		);
+		const schema = z
+			.object({
+				title: z.string().meta(fieldOptions({ label: "Title" })),
+			})
+			.meta(
+				collectionOptions({
+					folder: "src/content/posts",
+					extension: "md",
+					format: "frontmatter",
+				}),
+			);
 		const yaml = buildDecapConfig({
 			collections: [{ name: "posts", schema }],
 		});
@@ -134,9 +178,39 @@ describe("zod meta round-trip", () => {
 		const schema = z
 			.boolean()
 			.default(false)
-			.meta({ ui: { widget: "boolean", label: "Draft" } });
+			.meta(fieldOptions({ widget: "boolean", label: "Draft" }));
 		const field = fieldFromZod("draft", schema);
 		expect(field.widget).toBe("boolean");
 		expect(field.label).toBe("Draft");
+	});
+});
+
+describe("astro image bridge", () => {
+	test("astroImageSchema emits a single Decap image widget", () => {
+		const field = fieldFromZod("hero", astroImageSchema());
+		expect(field).toEqual({
+			name: "hero",
+			label: "hero",
+			widget: "image",
+		});
+		expect(field.fields).toBeUndefined();
+	});
+
+	test("imagePathForDecap and decapPathToAstroImage round-trip path", () => {
+		expect(imagePathForDecap("images/x.png")).toBe("/images/x.png");
+		expect(
+			imagePathForDecap({
+				src: "foo.jpg",
+				width: 1,
+				height: 1,
+				format: "jpg",
+			}),
+		).toBe("/foo.jpg");
+		expect(decapPathToAstroImage("images/x.png")).toEqual({
+			src: "/images/x.png",
+			width: 0,
+			height: 0,
+			format: "png",
+		});
 	});
 });

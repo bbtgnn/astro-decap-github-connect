@@ -17,6 +17,7 @@
 		"check": "tsc -p ."
 	},
 	"dependencies": {
+		"esbuild": "^0.25.0",
 		"yaml": "catalog:"
 	},
 	"peerDependencies": {

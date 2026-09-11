@@ -1,19 +1,17 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { createConnection } from "node:net";
 import { resolve as resolvePath } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
-import {
-	type CollectionSpec,
-	type WriteDecapConfigOptions,
-	writeDecapConfig,
-} from "./codegen";
 import { missingDecapServerMessage, resolveDecapServer } from "./decap-server";
+import {
+	resolveContentConfigPath,
+	viteAliasesForBoot,
+} from "./content-paths";
 
-/** Default Decap local proxy port. */
 const DECAP_SERVER_PORT = 8081;
-
 const GLOBAL_DECAP = Symbol.for("zod-decap-local.decapProc");
+const CLI = fileURLToPath(new URL("./cli.ts", import.meta.url));
 
 type DecapGlobal = { proc?: ChildProcess };
 
@@ -39,86 +37,114 @@ function isPortOpen(port: number, host = "127.0.0.1"): Promise<boolean> {
 	});
 }
 
+function bunBin(): string {
+	return typeof process.execPath === "string" &&
+		process.execPath.includes("bun")
+		? process.execPath
+		: "bun";
+}
+
+/** Run Decap emit in a child Bun process (avoids Vite module-runner). */
+function runEmitCli(root: string, options: ZodDecapOptions): void {
+	const args = [CLI, "--root", root];
+	if (options.contentConfig) {
+		args.push("--content-config", options.contentConfig);
+	}
+	if (options.outFile) args.push("--out", options.outFile);
+	if (options.mediaFolder) args.push("--media-folder", options.mediaFolder);
+	if (options.publicFolder) args.push("--public-folder", options.publicFolder);
+
+	const child = spawnSync(bunBin(), args, {
+		cwd: root,
+		encoding: "utf8",
+		env: process.env,
+	});
+	if (child.status !== 0) {
+		throw new Error(
+			(child.stderr || child.stdout || "Decap emit failed").trim(),
+		);
+	}
+}
+
 export type ZodDecapOptions = {
-	collections: readonly CollectionSpec[] | CollectionSpec[];
+	/** Override path to Astro content config (default: auto-discover src/content.config.*). */
+	contentConfig?: string;
 	outFile?: string;
 	adminRoute?: string;
 	mediaFolder?: string;
 	publicFolder?: string;
-	schemaOwnerHint?: string;
 	/** Spawn `decap-server` during `astro dev`. Default true. */
 	startDecapServer?: boolean;
 	/**
-	 * Opt-in: in `astro dev`, watch schema module(s) and rewrite `config.yml`
-	 * without waiting for a full Astro restart. `true` uses `schemaOwnerHint`
-	 * as the module path (must export `collectionSchemas`).
+	 * Watch content config (and optional extras) in `astro dev` and regenerate YAML.
+	 * `true` watches the content config only; pass paths for schema modules etc.
 	 */
 	watchSchemas?: boolean | string | readonly string[];
+	/** Extra modules to watch when regenerating (e.g. `src/lib/schemas.ts`). */
+	watchExtra?: string | readonly string[];
 };
-
-function asMutableCollections(
-	collections: ZodDecapOptions["collections"],
-): CollectionSpec[] {
-	return [...collections];
-}
 
 function resolveWatchModules(
 	root: string,
+	contentConfigAbs: string,
 	watch: ZodDecapOptions["watchSchemas"],
-	schemaOwnerHint: string | undefined,
+	watchExtra: ZodDecapOptions["watchExtra"],
 ): string[] {
-	if (watch === undefined || watch === false) return [];
-	const raw: string[] =
-		watch === true
-			? schemaOwnerHint
-				? [schemaOwnerHint]
-				: []
-			: typeof watch === "string"
-				? [watch]
-				: [...watch];
-	return raw.map((p) => resolvePath(root, p));
-}
+	const extras = watchExtra
+		? (typeof watchExtra === "string" ? [watchExtra] : [...watchExtra]).map(
+				(p) => resolvePath(root, p),
+			)
+		: [];
 
-async function loadCollectionSchemas(
-	modulePath: string,
-): Promise<CollectionSpec[]> {
-	const href = `${pathToFileURL(modulePath).href}?t=${Date.now()}`;
-	const mod = (await import(/* @vite-ignore */ href)) as {
-		collectionSchemas?: CollectionSpec[];
-	};
-	if (!Array.isArray(mod.collectionSchemas)) {
-		throw new Error(`${modulePath} must export collectionSchemas array`);
+	if (watch === undefined || watch === false) {
+		return extras;
 	}
-	return mod.collectionSchemas;
+	if (watch === true) {
+		return [contentConfigAbs, ...extras];
+	}
+	const raw = typeof watch === "string" ? [watch] : [...watch];
+	return [...raw.map((p) => resolvePath(root, p)), ...extras];
 }
 
-export function zodDecap(options: ZodDecapOptions): AstroIntegration {
+export function zodDecap(options: ZodDecapOptions = {}): AstroIntegration {
 	const startDecapServer = options.startDecapServer ?? true;
 	const adminRoute = options.adminRoute ?? "/admin";
 	let decapProc: ChildProcess | undefined;
 	let projectRoot = "";
-
-	const writeOpts = (
-		root: string,
-		collections: CollectionSpec[] = asMutableCollections(options.collections),
-	): WriteDecapConfigOptions => ({
-		root,
-		collections,
-		outFile: options.outFile,
-		mediaFolder: options.mediaFolder,
-		publicFolder: options.publicFolder,
-		schemaOwnerHint: options.schemaOwnerHint,
-	});
+	let contentConfigAbs = "";
 
 	return {
 		name: "zod-decap-local",
 		hooks: {
-			"astro:config:setup": ({ command, config, injectRoute, logger }) => {
+			"astro:config:setup": async ({
+				command,
+				config,
+				injectRoute,
+				logger,
+				updateConfig,
+			}) => {
 				const root = fileURLToPath(config.root);
 				projectRoot = root;
-				const result = writeDecapConfig(writeOpts(root));
-				if (result.wrote) {
+				contentConfigAbs = resolveContentConfigPath(
+					root,
+					options.contentConfig,
+				);
+
+				updateConfig({
+					vite: {
+						resolve: {
+							alias: viteAliasesForBoot(),
+						},
+					},
+				});
+
+				try {
+					runEmitCli(root, options);
 					logger.info(`Wrote ${options.outFile ?? "public/admin/config.yml"}`);
+				} catch (err) {
+					const msg = err instanceof Error ? err.message : String(err);
+					logger.error(`Decap emit failed: ${msg}`);
+					throw err;
 				}
 
 				injectRoute({
@@ -187,40 +213,29 @@ export function zodDecap(options: ZodDecapOptions): AstroIntegration {
 				}
 			},
 			"astro:server:setup": ({ server, logger }) => {
+				const watchFlag = options.watchSchemas ?? true;
 				const modules = resolveWatchModules(
 					projectRoot,
-					options.watchSchemas,
-					options.schemaOwnerHint,
+					contentConfigAbs,
+					watchFlag,
+					options.watchExtra,
 				);
-				if (modules.length === 0) {
-					if (options.watchSchemas === true && !options.schemaOwnerHint) {
-						logger.warn(
-							"watchSchemas: true needs schemaOwnerHint (path to the module exporting collectionSchemas).",
-						);
-					}
-					return;
-				}
+				if (modules.length === 0) return;
 
-				const primary = modules[0];
 				for (const mod of modules) {
 					server.watcher.add(mod);
 				}
 
-				const onChange = async (changed: string) => {
+				const onChange = (changed: string) => {
 					const hit = modules.some(
 						(m) => changed === m || resolvePath(changed) === m,
 					);
 					if (!hit) return;
 					try {
-						const collections = await loadCollectionSchemas(primary);
-						const result = writeDecapConfig(
-							writeOpts(projectRoot, collections),
+						runEmitCli(projectRoot, options);
+						logger.info(
+							`Regenerated ${options.outFile ?? "public/admin/config.yml"} (schema watch)`,
 						);
-						if (result.wrote) {
-							logger.info(
-								`Regenerated ${options.outFile ?? "public/admin/config.yml"} (schema watch)`,
-							);
-						}
 					} catch (err) {
 						const msg = err instanceof Error ? err.message : String(err);
 						logger.error(`Schema watch regenerate failed: ${msg}`);

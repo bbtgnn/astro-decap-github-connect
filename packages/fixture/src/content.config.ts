@@ -8,10 +8,6 @@ function asAstroSchema<T>(schema: T): AstroZod.ZodTypeAny {
 	return schema as unknown as AstroZod.ZodTypeAny;
 }
 
-/**
- * Schema owner = Zod (+ FieldUi meta) in `src/lib/schemas.ts`.
- * `zodDecap` integration regenerates `public/admin/config.yml`. Do not hand-edit YAML.
- */
 const authors = defineCollection({
 	loader: glob({
 		pattern: "**/*.{yml,yaml}",

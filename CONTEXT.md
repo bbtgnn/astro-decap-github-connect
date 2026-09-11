@@ -4,25 +4,49 @@ Temporary **local** editorial path while a separate authoring shell lands. **Not
 
 ## Language
 
+**Content config**:
+Astro’s `src/content.config.ts` and its `export const collections` — the registry that names collections and wires loaders to Zod schemas.
+_Avoid_: `collectionSchemas`, a parallel Decap-only registry
+
 **Schema owner**:
-Zod collection schemas in the consumer app (fixture: `src/lib/schemas.ts`), with FieldUi (`widget`, `label`, `options`) on `.meta()` via `zod-decap-local` helpers.
-_Avoid_: treating `config.yml` as source of truth
+Plain Zod schemas used by Content Layer (often co-located or imported into the content config), with optional Decap chrome via `.meta(fieldOptions(…))` / `.meta(collectionOptions(…))`.
+_Avoid_: FieldUi helper constructors (`text()`, `relation()`, …) as the app-facing style; treating `config.yml` as source of truth
+
+**Field options**:
+Discriminated editorial meta (`widget`, `label`, relation targets, …) applied with `fieldOptions` and read when emitting Decap config.
+_Avoid_: Decap snake_case keys in app source; untyped option bags as the primary path
+
+**Collection options**:
+Optional collection-level meta (`label`, `folder`, `format`, …) when the loader stamp is missing or must be overridden.
+_Avoid_: duplicating folder paths only for Decap when the Astro loader already defines them
+
+**Loader stamp**:
+Passthrough record of Astro loader inputs (`glob` / `file` base, pattern, …) visible to codegen without changing Content Layer behaviour.
+_Avoid_: parsing loader closures or `.astro` data-store as source of truth
+
+**Astro content proxy**:
+Boot-time passthrough of `astro:content` / `astro/loaders` symbols (`reference`, `glob`, `file`, and `image` via collection setup) that preserves Astro validation and adds stamps/meta for emit.
+_Avoid_: replacing Astro validators with Decap-only fakes in the app graph
+
+**Decap emit**:
+One-way walk from content-config collections → `public/admin/config.yml` (load + build + write/check).
+_Avoid_: bidirectional sync, hand-maintained YAML, exporting Zod walkers as the package face
 
 **Decap editor**:
 Temporary React admin SPA at `/admin` (injected by `zodDecap`) writing the working tree through `local_backend` + `decap-server`.
 _Avoid_: GitHub OAuth, CMS server, shared core with `@cms/*`
 
-**Codegen**:
-One-way Zod → `public/admin/config.yml` inside `zod-decap-local` (`buildDecapConfig` / `writeDecapConfig`).
-_Avoid_: bidirectional sync, hand-maintained YAML
-
 **Astro integration**:
-`zodDecap({ collections })` writes config, injects `/admin`, resolves/spawns pinned `decap-server@3.11.0` in `astro dev`, optional `watchSchemas` regen.
-_Avoid_: fat CMS platform features
+`zodDecap` discovers/loads the content config, runs Decap emit, injects `/admin`, resolves/spawns pinned `decap-server@3.11.0` in `astro dev`, optional watch regen.
+_Avoid_: fat CMS platform features; passing a static `collections` array into the integration
 
 **Content contract**:
-Files under `src/content/**` loaded with Astro Content Layer `glob()` / `file()`.
+Files under `src/content/**` (or loader bases) loaded with Astro Content Layer.
 _Avoid_: custom Decap content adapter / remote loader
+
+**Image bridge**:
+Decap edits public path strings; Astro `image()` is an object (`src`/`width`/`height`/`format`). Package helpers: `astroImageSchema`, `imagePathForDecap`, `decapPathToAstroImage`. Emit flattens the object shape to a Decap `image` widget.
+_Avoid_: full asset-pipeline parity with import ids / `_astro` URLs
 
 **Write-back (stopgap sense)**:
 Decap → `decap-server` → local files → refresh / rebuild.
@@ -30,8 +54,10 @@ _Avoid_: conflating with authoring-shell FS write-back via `/_cms`, or remote Gi
 
 ## Closed decisions
 
-- Zod → Decap YAML only
+- Zod → Decap YAML only; registry is Astro `collections`, not a side list
+- Plain Zod + optional `fieldOptions` / `collectionOptions`; derive widgets aggressively; hard-fail mismatched meta at emit
 - Local Decap only (`local_backend`); no GitHub OAuth in this stopgap
+- Boot-time content proxies (passthrough + stamp); CLI uses the same shim modules
 - Monorepo: `zod-decap-local` package + `fixture` app (Bun + Biome, `@cms` tooling style)
 - Media: `public/images` ↔ `/images`
 - Widget subset: string, number, boolean, datetime, select, object, list, markdown, image, relation
@@ -44,3 +70,4 @@ _Avoid_: conflating with authoring-shell FS write-back via `/_cms`, or remote Gi
 - Full Decap widget / i18n / blocks parity
 - Shared packages with `@cms/*`
 - Editorial workflow / Decap Turbo
+- Full bidirectional Astro image asset pipeline
