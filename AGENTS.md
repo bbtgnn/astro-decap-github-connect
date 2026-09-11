@@ -17,7 +17,7 @@
 
 ## Local editorial
 
-`bun run dev` → fixture Astro + integration-spawned `decap-server`. Config must keep `local_backend: true`. No OAuth routes.
+`bun run dev` → fixture Astro + **editorial session** (spawned `decap-server`, Decap emit, schema watch). Config must keep `local_backend: true`. No OAuth routes. Session lives in `packages/zod-decap-local/src/session/`; `astro.ts` is the thin Astro adapter.
 
 Fixture pins port **4321**; if busy, Astro takes the next free port — open `/admin` on that port. Missing `decap-server@3.11.0` should fail with an install hint (`bun add -d decap-server@3.11.0`). Default watch regenerates YAML when `content.config` / `watchExtra` modules change.
 

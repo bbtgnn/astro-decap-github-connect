@@ -36,9 +36,13 @@ _Avoid_: bidirectional sync, hand-maintained YAML, exporting Zod walkers as the 
 Temporary React admin SPA at `/admin` (injected by `zodDecap`) writing the working tree through `local_backend` + `decap-server`.
 _Avoid_: GitHub OAuth, CMS server, shared core with `@cms/*`
 
+**Editorial session**:
+Local Decap runtime owned by `session/`: emit via compiled CLI, schema-watch regen, and `decap-server` resolve/spawn/reuse/port.
+_Avoid_: burying that lifecycle inside Astro hook bodies; treating the session as a public package export
+
 **Astro integration**:
-`zodDecap` discovers/loads the content config, runs Decap emit, injects `/admin`, resolves/spawns pinned `decap-server@3.11.0` in `astro dev`, optional watch regen.
-_Avoid_: fat CMS platform features; passing a static `collections` array into the integration
+Thin `zodDecap` adapter: resolve paths, content-proxy Vite wiring, inject `/admin`, call the editorial session from Astro hooks.
+_Avoid_: fat CMS platform features; passing a static `collections` array into the integration; owning emit/server lifecycle in the adapter
 
 **Content contract**:
 Files under `src/content/**` (or loader bases) loaded with Astro Content Layer.
