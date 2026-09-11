@@ -26,7 +26,6 @@ export const postsSchema = z
 			.string()
 			.meta(
 				fieldOptions({
-					widget: "relation",
 					label: "Author",
 					relation: {
 						collection: "authors",
@@ -39,7 +38,7 @@ export const postsSchema = z
 		tags: z
 			.array(z.string().meta(fieldOptions({ label: "Tag" })))
 			.default([])
-			.meta(fieldOptions({ widget: "list", label: "Tags" })),
+			.meta(fieldOptions({ label: "Tags" })),
 		status: z
 			.enum(["draft", "published", "archived"])
 			.default("draft")

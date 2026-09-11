@@ -7,6 +7,7 @@ import type {
 	DecapMeta,
 	DecapWidget,
 	FieldOptions,
+	RelationOptions,
 } from "../meta";
 
 /** JSON Schema from Zod, plus Decap meta keys merged by `toJSONSchema`. */
@@ -161,6 +162,36 @@ function itemsNode(node: EmitJsonSchema): EmitJsonSchema {
 	return items as EmitJsonSchema;
 }
 
+function hasRelationConfig(
+	opts: FieldOptions | undefined,
+): opts is FieldOptions & { relation: RelationOptions } {
+	return Boolean(opts && "relation" in opts && opts.relation);
+}
+
+/** Resolve Decap widget: relation config wins; bare `widget: "relation"` fails. */
+export function resolveWidget(
+	name: string,
+	node: EmitJsonSchema,
+	opts: FieldOptions | undefined,
+): string {
+	if (hasRelationConfig(opts)) {
+		if (opts.widget !== undefined && opts.widget !== "relation") {
+			throw new Error(
+				`Field "${name}": relation config is incompatible with widget "${opts.widget}"`,
+			);
+		}
+		return "relation";
+	}
+	// Runtime meta may still carry a bare relation widget (invalid FieldOptions).
+	const rawWidget = (opts as { widget?: string } | undefined)?.widget;
+	if (rawWidget === "relation") {
+		throw new Error(
+			`Field "${name}": widget "relation" requires relation: { collection, ... }`,
+		);
+	}
+	return rawWidget ?? inferWidget(node);
+}
+
 export function fieldFromJsonSchema(
 	name: string,
 	node: EmitJsonSchema,
@@ -169,7 +200,7 @@ export function fieldFromJsonSchema(
 	assertNoRefs(node, name);
 	const opts = fieldOptionsOf(node);
 	const label = opts?.label ?? name;
-	const widget = opts?.widget ?? inferWidget(node);
+	const widget = resolveWidget(name, node, opts);
 	assertWidgetCompatible(name, widget, node);
 
 	const field: DecapField = {
@@ -186,7 +217,7 @@ export function fieldFromJsonSchema(
 		field.default = node.default;
 	}
 
-	if (opts && "relation" in opts && opts.widget === "relation") {
+	if (hasRelationConfig(opts)) {
 		field.collection = opts.relation.collection;
 		field.value_field = opts.relation.valueField ?? "{{slug}}";
 		field.search_fields = opts.relation.searchFields ?? ["title", "name"];

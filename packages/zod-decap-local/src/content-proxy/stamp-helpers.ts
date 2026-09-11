@@ -6,7 +6,6 @@ import { fieldOptions } from "../meta";
 
 export function relationFieldMeta(collection: string) {
 	return fieldOptions({
-		widget: "relation",
 		relation: { collection },
 	});
 }

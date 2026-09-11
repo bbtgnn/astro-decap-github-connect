@@ -43,14 +43,13 @@ describe("fieldFromZod", () => {
 		expect(field.default).toBe(false);
 	});
 
-	test("maps relation fieldOptions to Decap relation widget", () => {
+	test("relation config implies Decap relation widget", () => {
 		const field = fieldFromZod(
 			"author",
 			z
 				.string()
 				.meta(
 					fieldOptions({
-						widget: "relation",
 						label: "Author",
 						relation: {
 							collection: "authors",
@@ -71,6 +70,32 @@ describe("fieldFromZod", () => {
 			search_fields: ["name"],
 			display_fields: ["name"],
 		});
+	});
+
+	test("accepts optional widget: relation beside relation config", () => {
+		const field = fieldFromZod(
+			"author",
+			z.string().meta(
+				fieldOptions({
+					widget: "relation",
+					relation: { collection: "authors" },
+				}),
+			),
+		);
+		expect(field.widget).toBe("relation");
+		expect(field.collection).toBe("authors");
+	});
+
+	test("rejects widget: relation without relation config", () => {
+		expect(() =>
+			fieldFromZod(
+				"author",
+				// Runtime / escape path: bare relation widget is invalid
+				z.string().meta({
+					zodDecapField: { widget: "relation", label: "Author" },
+				}),
+			),
+		).toThrow(/requires relation/);
 	});
 
 	test("maps nested object to Decap object widget with child fields", () => {

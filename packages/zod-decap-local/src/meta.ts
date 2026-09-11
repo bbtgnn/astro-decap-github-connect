@@ -1,6 +1,10 @@
 /**
  * Editorial meta for Decap emit — applied via Zod `.meta(fieldOptions(…))`
  * / `.meta(collectionOptions(…))`.
+ *
+ * Prefer inference from Zod kinds. Explicit `widget` is for overrides inference
+ * cannot know (image / markdown). A `relation` object implies the relation
+ * widget — you do not need `widget: "relation"` beside it.
  */
 export type RelationOptions = {
 	collection: string;
@@ -27,14 +31,25 @@ type FieldOptionsBase = {
 	decap?: Record<string, unknown>;
 };
 
-export type FieldOptions =
-	| (FieldOptionsBase & {
-			widget?: Exclude<DecapWidget, "relation">;
-	  })
-	| (FieldOptionsBase & {
-			widget: "relation";
-			relation: RelationOptions;
-	  });
+/**
+ * Non-relation field options. `widget` overrides Zod inference when needed
+ * (typically `image` or `markdown` on a string).
+ */
+type FieldOptionsPlain = FieldOptionsBase & {
+	widget?: Exclude<DecapWidget, "relation">;
+	relation?: never;
+};
+
+/**
+ * Relation field options. Presence of `relation` implies widget `"relation"`;
+ * repeating `widget: "relation"` is optional.
+ */
+type FieldOptionsRelation = FieldOptionsBase & {
+	widget?: "relation";
+	relation: RelationOptions;
+};
+
+export type FieldOptions = FieldOptionsPlain | FieldOptionsRelation;
 
 export type CollectionOptions = {
 	label?: string;

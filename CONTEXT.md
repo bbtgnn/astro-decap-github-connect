@@ -13,8 +13,8 @@ Plain Zod schemas used by Content Layer (often co-located or imported into the c
 _Avoid_: FieldUi helper constructors (`text()`, `relation()`, …) as the app-facing style; treating `config.yml` as source of truth
 
 **Field options**:
-Discriminated editorial meta (`widget`, `label`, relation targets, …) applied with `fieldOptions` and read when emitting Decap config.
-_Avoid_: Decap snake_case keys in app source; untyped option bags as the primary path
+Discriminated editorial meta (`label`, optional `widget` override, `relation` targets, …) applied with `fieldOptions` and read when emitting Decap config. Zod kinds infer most widgets; `relation: {…}` implies the relation widget; `widget` is mainly for `image` / `markdown` on strings.
+_Avoid_: Decap snake_case keys in app source; untyped option bags as the primary path; requiring `widget: "relation"` beside a relation config
 
 **Collection options**:
 Optional collection-level meta (`label`, `folder`, `format`, …) when the loader stamp is missing or must be overridden.
@@ -59,7 +59,7 @@ _Avoid_: remote Git commits as the primary local loop
 ## Closed decisions
 
 - Zod → Decap YAML only; registry is Astro `collections`, not a side list
-- Plain Zod + optional `fieldOptions` / `collectionOptions`; derive widgets aggressively; hard-fail mismatched meta at emit
+- Plain Zod + optional `fieldOptions` / `collectionOptions`; derive widgets aggressively (`relation` implies relation widget; explicit `widget` mainly for image/markdown); hard-fail mismatched meta at emit
 - Local Decap only (`local_backend`); no GitHub OAuth
 - Owned pins: `decap-server@3.11.0` + `decap-cms@3.11.0` inside `zod-decap-local`; fixed `:8081` (stranger → fail)
 - Emit at Astro config setup; schema/content-config changes need an Astro restart (no schema watch)
