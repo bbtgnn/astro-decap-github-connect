@@ -9,9 +9,8 @@ import {
 } from "./decap-server";
 
 describe("resolveDecapServer", () => {
-	test("finds pinned binary from fixture workspace", () => {
-		const fixtureRoot = join(import.meta.dir, "../../fixture");
-		const result = resolveDecapServer(fixtureRoot);
+	test("finds pinned binary from this package", () => {
+		const result = resolveDecapServer();
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.version).toBe(DECAP_SERVER_PIN);
@@ -19,20 +18,23 @@ describe("resolveDecapServer", () => {
 		expect(result.warn).toBeUndefined();
 	});
 
-	test("fails with install hint when package is missing", () => {
+	test("fails with reinstall hint when package is missing", () => {
 		const empty = mkdtempSync(join(tmpdir(), "zod-decap-no-decap-"));
-		const result = resolveDecapServer(empty);
+		const result = resolveDecapServer(join(empty, "package.json"));
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
 		expect(result.message).toContain(`decap-server@${DECAP_SERVER_PIN}`);
-		expect(result.message).toContain("bun add -d decap-server@");
+		expect(result.message).toContain("Reinstall workspace deps");
+		expect(result.message).not.toContain("bun add -d decap-server");
 	});
 });
 
 describe("missingDecapServerMessage", () => {
-	test("mentions pin and install command", () => {
+	test("mentions pin and reinstall guidance", () => {
 		const msg = missingDecapServerMessage();
 		expect(msg).toContain(DECAP_SERVER_PIN);
-		expect(msg).toContain("bun add -d");
+		expect(msg).toContain("zod-decap-local");
+		expect(msg).toContain("Reinstall workspace deps");
+		expect(msg).not.toContain("bun add -d");
 	});
 });

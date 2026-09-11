@@ -1,19 +1,48 @@
 /**
- * Local editorial session: Decap emit, schema-watch regen, and decap-server
- * lifecycle for `local_backend`. Astro hooks stay a thin adapter over this.
+ * Local editorial session: Decap emit and pinned `decap-server` lifecycle for
+ * `local_backend`. Proxy is always :8081 (strangers → fail). Astro hooks stay
+ * a thin adapter over this. Schema/content-config edits need an Astro restart —
+ * emit runs at config setup only (no schema watch).
  */
 
-import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import {
+	type ChildProcess,
+	spawn as nodeSpawn,
+	spawnSync,
+} from "node:child_process";
 import { existsSync } from "node:fs";
 import { createConnection } from "node:net";
-import { resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
-import { missingDecapServerMessage, resolveDecapServer } from "../decap-server";
+import {
+	type DecapServerResolve,
+	missingDecapServerMessage,
+	resolveDecapServer,
+} from "../decap-server";
 
-const DECAP_SERVER_PORT = 8081;
-const GLOBAL_DECAP = Symbol.for("zod-decap-local.decapProc");
+export const DEFAULT_DECAP_PROXY_PORT = 8081;
+export const DEFAULT_READY_TIMEOUT_MS = 2000;
 
-type DecapGlobal = { proc?: ChildProcess };
+const GLOBAL_SESSION = Symbol.for("zod-decap-local.decapSession");
+
+type SessionState = {
+	proc?: ChildProcess;
+	port?: number;
+	version?: string;
+	signalsRegistered?: boolean;
+};
+
+export type EnsureResult =
+	| { status: "started"; port: number; version: string; warn?: string }
+	| { status: "reused"; port: number; version?: string }
+	| { status: "failed"; message: string; port?: number };
+
+export type SessionDeps = {
+	resolve?: () => DecapServerResolve;
+	spawn?: typeof nodeSpawn;
+	isPortOpen?: (port: number, host?: string) => Promise<boolean>;
+	now?: () => number;
+	sleep?: (ms: number) => Promise<void>;
+};
 
 export type SessionLogger = {
 	info(message: string): void;
@@ -27,28 +56,13 @@ export type EditorialSessionOptions = {
 	outFile?: string;
 	mediaFolder?: string;
 	publicFolder?: string;
-	/**
-	 * Watch content config (and optional extras) in `astro dev` and regenerate YAML.
-	 * `true` watches the content config only; pass paths for schema modules etc.
-	 */
-	watchSchemas?: boolean | string | readonly string[];
-	/** Extra modules to watch when regenerating (e.g. `src/lib/schemas.ts`). */
-	watchExtra?: string | readonly string[];
 };
 
 export type EditorialSession = {
 	/** Run Decap emit once via the compiled CLI (`process.execPath`). */
 	emit(): { wrote: boolean };
 	/** Resolve / reuse / spawn pinned `decap-server` for local_backend. */
-	ensureDecapServer(logger: SessionLogger): Promise<void>;
-	/** Watch content config (and extras) and re-emit on change. */
-	attachWatch(
-		watcher: {
-			add(path: string): void;
-			on(event: "change", cb: (path: string) => void): void;
-		},
-		logger: SessionLogger,
-	): void;
+	ensureDecapServer(deps?: SessionDeps): Promise<EnsureResult>;
 	/** Log the Decap admin URL once Astro has bound a port. */
 	logAdminUrl(
 		address: { address: string; port: number },
@@ -57,19 +71,49 @@ export type EditorialSession = {
 	): void;
 };
 
-function decapGlobal(): DecapGlobal {
+function sessionState(): SessionState {
 	const g = globalThis as typeof globalThis & {
-		[GLOBAL_DECAP]?: DecapGlobal;
+		[GLOBAL_SESSION]?: SessionState;
 	};
-	if (!g[GLOBAL_DECAP]) g[GLOBAL_DECAP] = {};
-	return g[GLOBAL_DECAP];
+	if (!g[GLOBAL_SESSION]) g[GLOBAL_SESSION] = {};
+	return g[GLOBAL_SESSION];
 }
 
-function isAlive(proc: ChildProcess | undefined): boolean {
+/** Test helper: clear process-global session state. */
+export function resetLocalDecapSessionForTests(): void {
+	const state = sessionState();
+	state.proc?.kill();
+	state.proc = undefined;
+	state.port = undefined;
+	state.version = undefined;
+	state.signalsRegistered = false;
+}
+
+export function getLocalDecapSessionPort(): number | undefined {
+	return sessionState().port;
+}
+
+export function localBackendUrl(
+	port: number = DEFAULT_DECAP_PROXY_PORT,
+	host = "127.0.0.1",
+): string {
+	return `http://${host}:${port}/api/v1`;
+}
+
+/**
+ * Proxy API URL when the session owns :8081; otherwise not ready.
+ * Honest fixed-port helper — callers must not invent an alternate URL.
+ */
+export function alignedLocalBackendUrl(): string | undefined {
+	if (sessionState().port == null) return undefined;
+	return localBackendUrl(DEFAULT_DECAP_PROXY_PORT);
+}
+
+export function isAlive(proc: ChildProcess | undefined): boolean {
 	return Boolean(proc && proc.exitCode === null && !proc.killed);
 }
 
-function isPortOpen(port: number, host = "127.0.0.1"): Promise<boolean> {
+export function isPortOpen(port: number, host = "127.0.0.1"): Promise<boolean> {
 	return new Promise((resolve) => {
 		const socket = createConnection({ port, host }, () => {
 			socket.end();
@@ -77,6 +121,165 @@ function isPortOpen(port: number, host = "127.0.0.1"): Promise<boolean> {
 		});
 		socket.on("error", () => resolve(false));
 	});
+}
+
+async function waitUntilPortOpen(
+	port: number,
+	timeoutMs: number,
+	deps: Pick<SessionDeps, "isPortOpen" | "now" | "sleep">,
+): Promise<boolean> {
+	const open = deps.isPortOpen ?? isPortOpen;
+	const now = deps.now ?? Date.now;
+	const sleep =
+		deps.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+	const deadline = now() + timeoutMs;
+	while (now() < deadline) {
+		if (await open(port)) return true;
+		await sleep(50);
+	}
+	return open(port);
+}
+
+function registerStopSignalsOnce(state: SessionState): void {
+	if (state.signalsRegistered) return;
+	state.signalsRegistered = true;
+	const stop = () => {
+		stopLocalDecapSession();
+	};
+	process.on("exit", stop);
+	process.on("SIGINT", stop);
+	process.on("SIGTERM", stop);
+}
+
+export function stopLocalDecapSession(): void {
+	const state = sessionState();
+	if (state.proc && isAlive(state.proc)) {
+		state.proc.kill();
+	}
+	state.proc = undefined;
+	state.port = undefined;
+	state.version = undefined;
+}
+
+/**
+ * Ensure a local Decap proxy for `cwd` on the fixed Decap default port (:8081).
+ * Reuses the process-global session across Vite reloads; fails if a stranger holds 8081.
+ */
+export async function ensureLocalDecapSession(options: {
+	cwd: string;
+	readyTimeoutMs?: number;
+	deps?: SessionDeps;
+}): Promise<EnsureResult> {
+	const { cwd, readyTimeoutMs = DEFAULT_READY_TIMEOUT_MS, deps = {} } = options;
+	const state = sessionState();
+	const resolve = deps.resolve ?? (() => resolveDecapServer());
+	const spawn = deps.spawn ?? nodeSpawn;
+	const open = deps.isPortOpen ?? isPortOpen;
+	const port = DEFAULT_DECAP_PROXY_PORT;
+
+	if (isAlive(state.proc) && state.port != null) {
+		return {
+			status: "reused",
+			port: state.port,
+			version: state.version,
+		};
+	}
+
+	// Stale handle — clear before claiming the port.
+	state.proc = undefined;
+	state.port = undefined;
+	state.version = undefined;
+
+	if (await open(port)) {
+		return {
+			status: "failed",
+			message: `Port ${port} is already in use. Free :${port} (do not soft-adopt strangers) and retry.`,
+			port,
+		};
+	}
+
+	const resolved = resolve();
+	if (!resolved.ok) {
+		return { status: "failed", message: resolved.message, port };
+	}
+
+	let proc: ChildProcess;
+	try {
+		proc = spawn(process.execPath, [resolved.bin], {
+			cwd,
+			stdio: "inherit",
+			env: { ...process.env, PORT: String(port) },
+		});
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		return {
+			status: "failed",
+			message: `Failed to start decap-server (${message}). ${missingDecapServerMessage()}`,
+			port,
+		};
+	}
+
+	state.proc = proc;
+	state.port = port;
+	state.version = resolved.version;
+	registerStopSignalsOnce(state);
+
+	proc.on("error", () => {
+		if (state.proc === proc) {
+			state.proc = undefined;
+			state.port = undefined;
+			state.version = undefined;
+		}
+	});
+	proc.on("exit", () => {
+		if (state.proc === proc) {
+			state.proc = undefined;
+			state.port = undefined;
+			state.version = undefined;
+		}
+	});
+
+	const ready = await waitUntilPortOpen(port, readyTimeoutMs, deps);
+	if (!ready) {
+		proc.kill();
+		if (state.proc === proc) {
+			state.proc = undefined;
+			state.port = undefined;
+			state.version = undefined;
+		}
+		return {
+			status: "failed",
+			message: `decap-server did not accept connections on :${port} within ${readyTimeoutMs}ms`,
+			port,
+		};
+	}
+
+	return {
+		status: "started",
+		port,
+		version: resolved.version,
+		warn: resolved.warn,
+	};
+}
+
+export function logEnsureResult(
+	logger: SessionLogger,
+	result: EnsureResult,
+): void {
+	if (result.status === "reused") {
+		logger.info(
+			`Reusing decap-server on :${result.port}${result.version ? `@${result.version}` : ""} (config reload)`,
+		);
+		return;
+	}
+	if (result.status === "started") {
+		if (result.warn) logger.warn(result.warn);
+		logger.info(
+			`Started decap-server@${result.version} for local_backend on :${result.port}`,
+		);
+		return;
+	}
+	logger.error(result.message);
 }
 
 /**
@@ -91,28 +294,6 @@ function resolveCliEntry(): string {
 		);
 	}
 	return entry;
-}
-
-function resolveWatchModules(
-	root: string,
-	contentConfigAbs: string,
-	watch: EditorialSessionOptions["watchSchemas"],
-	watchExtra: EditorialSessionOptions["watchExtra"],
-): string[] {
-	const extras = watchExtra
-		? (typeof watchExtra === "string" ? [watchExtra] : [...watchExtra]).map(
-				(p) => resolvePath(root, p),
-			)
-		: [];
-
-	if (watch === undefined || watch === false) {
-		return extras;
-	}
-	if (watch === true) {
-		return [contentConfigAbs, ...extras];
-	}
-	const raw = typeof watch === "string" ? [watch] : [...watch];
-	return [...raw.map((p) => resolvePath(root, p)), ...extras];
 }
 
 function runEmitCli(
@@ -143,103 +324,15 @@ function runEmitCli(
 
 export function createEditorialSession(
 	root: string,
-	contentConfigAbs: string,
 	options: EditorialSessionOptions = {},
 ): EditorialSession {
-	let decapProc: ChildProcess | undefined;
-
 	return {
 		emit() {
 			return runEmitCli(root, options);
 		},
 
-		async ensureDecapServer(logger) {
-			const state = decapGlobal();
-			if (isAlive(state.proc)) {
-				decapProc = state.proc;
-				logger.info(
-					`Reusing decap-server on :${DECAP_SERVER_PORT} (config reload)`,
-				);
-				return;
-			}
-			if (await isPortOpen(DECAP_SERVER_PORT)) {
-				logger.info(
-					`decap-server already listening on :${DECAP_SERVER_PORT}; not spawning another`,
-				);
-				return;
-			}
-
-			const resolved = resolveDecapServer(root);
-			if (!resolved.ok) {
-				logger.error(resolved.message);
-				return;
-			}
-			if (resolved.warn) {
-				logger.warn(resolved.warn);
-			}
-
-			decapProc = spawn(process.execPath, [resolved.bin], {
-				cwd: root,
-				stdio: "inherit",
-				env: process.env,
-			});
-			state.proc = decapProc;
-			decapProc.on("error", (err) => {
-				logger.error(
-					`Failed to start decap-server (${err.message}). ${missingDecapServerMessage()}`,
-				);
-			});
-			decapProc.on("exit", (code, signal) => {
-				if (state.proc === decapProc) state.proc = undefined;
-				decapProc = undefined;
-				if (code && code !== 0) {
-					logger.error(
-						`decap-server exited (code ${code}${signal ? `, signal ${signal}` : ""}). Local /admin writes need it running.`,
-					);
-				}
-			});
-			const stop = () => {
-				state.proc?.kill();
-				state.proc = undefined;
-				decapProc = undefined;
-			};
-			process.on("exit", stop);
-			process.on("SIGINT", stop);
-			process.on("SIGTERM", stop);
-			logger.info(`Started decap-server@${resolved.version} for local_backend`);
-		},
-
-		attachWatch(watcher, logger) {
-			const watchFlag = options.watchSchemas ?? true;
-			const modules = resolveWatchModules(
-				root,
-				contentConfigAbs,
-				watchFlag,
-				options.watchExtra,
-			);
-			if (modules.length === 0) return;
-
-			for (const mod of modules) {
-				watcher.add(mod);
-			}
-
-			watcher.on("change", (changed) => {
-				const hit = modules.some(
-					(m) => changed === m || resolvePath(changed) === m,
-				);
-				if (!hit) return;
-				try {
-					const { wrote } = runEmitCli(root, options);
-					if (wrote) {
-						logger.info(
-							`Regenerated ${options.outFile ?? "public/admin/config.yml"} (schema watch)`,
-						);
-					}
-				} catch (err) {
-					const msg = err instanceof Error ? err.message : String(err);
-					logger.error(`Schema watch regenerate failed: ${msg}`);
-				}
-			});
+		ensureDecapServer(deps) {
+			return ensureLocalDecapSession({ cwd: root, deps });
 		},
 
 		logAdminUrl(address, adminRoute, logger) {

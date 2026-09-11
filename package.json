@@ -1,7 +1,7 @@
 {
 	"name": "astro-decap-github-connect",
 	"private": true,
-	"description": "Local Decap stopgap — Zod schema owner + Astro integration",
+	"description": "Local Decap editorial — Zod schema owner + Astro integration",
 	"packageManager": "bun@1.3.12",
 	"workspaces": {
 		"packages": [

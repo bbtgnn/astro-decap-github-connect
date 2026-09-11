@@ -17,18 +17,23 @@
 
 ## Local editorial
 
-`bun run dev` → fixture Astro + **editorial session** (spawned `decap-server`, Decap emit, schema watch). Config must keep `local_backend: true`. No OAuth routes. Session lives in `packages/zod-decap-local/src/session/`; `astro.ts` is the thin Astro adapter.
+`bun run dev` → fixture Astro + **editorial session** (owned `decap-server` + `decap-cms`, Decap emit at config setup). Config must keep `local_backend: true`. No OAuth routes. Session lives in `packages/zod-decap-local/src/session/`; `astro.ts` is the thin Astro adapter.
 
-Fixture pins port **4321**; if busy, Astro takes the next free port — open `/admin` on that port. Missing `decap-server@3.11.0` should fail with an install hint (`bun add -d decap-server@3.11.0`). Default watch regenerates YAML when `content.config` / `watchExtra` modules change.
+- **Astro** pins fixture port **4321**; if busy, Astro takes the next free port — open `/admin` on that port.
+- **`decap-server`** is a package dependency pinned at `3.11.0`, always on **`:8081`**. A stranger on 8081 → fail (no soft-adopt / free-port / YAML URL rewrite). Missing pin → reinstall workspace deps / `zod-decap-local`.
+- **Admin CMS** is copied from npm `decap-cms@3.11.0` beside `config.yml` (`publishAdmin`); no unpkg CDN.
+- **Schema / content-config edits need an Astro restart.** Emit runs once at `astro:config:setup` — there is no schema watch. After restart, hard-refresh `/admin` so Decap loads the new YAML.
 
 ## Do not
 
 - Build YAML→Zod or bidirectional sync
 - Add a Content Layer loader “for Decap”
-- Reintroduce GitHub OAuth / SSR adapter for this stopgap
+- Reintroduce GitHub OAuth / SSR adapter
 - Import or publish shared packages with `astro-dev-cms-gui` / `@cms/*`
 - Expand widget parity beyond the boring subset without an explicit ask
 - Bring back a parallel `collectionSchemas` registry
+- Soft-adopt strangers on `:8081` or rewrite `local_backend.url` for free ports
+- Reintroduce schema-watch / `watchExtra` without an explicit product ask
 
 ## Prove the loop
 

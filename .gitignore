@@ -18,3 +18,6 @@ dist/
 *.log
 .vscode/*
 !.vscode/extensions.json
+
+# Synced from decap-cms (npm) on astro dev/build — not source of truth
+packages/fixture/public/admin/decap-cms.js

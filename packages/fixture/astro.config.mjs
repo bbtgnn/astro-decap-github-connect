@@ -11,9 +11,5 @@ const base = withTrailingSlash(process.env.PUBLIC_BASE_PATH || "/");
 export default defineConfig({
 	site: process.env.PUBLIC_SITE_URL,
 	base,
-	integrations: [
-		zodDecap({
-			watchExtra: "src/lib/schemas.ts",
-		}),
-	],
+	integrations: [zodDecap()],
 });
