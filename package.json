@@ -16,10 +16,10 @@
 		}
 	},
 	"scripts": {
-		"dev": "bun run --filter fixture dev",
-		"build": "bun run --filter fixture build",
+		"dev": "bun run --filter zod-decap-local build && bun run --filter fixture dev",
+		"build": "bun run --filter zod-decap-local build && bun run --filter fixture build",
 		"test": "bun run --filter zod-decap-local test",
-		"check": "bun run --filter zod-decap-local check && bun run --filter fixture codegen:check",
+		"check": "bun run --filter zod-decap-local build && bun run --filter zod-decap-local check && bun run --filter fixture codegen:check",
 		"lint": "biome check .",
 		"format": "biome check --write ."
 	},

@@ -1,5 +1,5 @@
 # GENERATED FILE — do not hand-edit.
-# Schema owner: src/lib/schemas.ts.
+# Schema owner: src/content.config.ts.
 # Regenerate: astro dev/build (zodDecap integration) or zod-decap-local CLI
 # Dev: local_backend + decap-server (started by the Astro integration)
 local_backend: true
@@ -91,7 +91,7 @@ collections:
         widget: list
         default: []
         field:
-          name: tag
+          name: item
           label: Tag
           widget: string
       - name: status

@@ -1,16 +1,12 @@
-#!/usr/bin/env bun
 /**
  * CLI for CI drift checks. Prefer the Astro integration for normal writes.
+ * Built to `dist/cli.js` (bin + process.execPath); monorepo may run `bun src/cli.ts`.
  *
- * Usage (from an app that exports collectionSchemas):
- *   bun run ./scripts/codegen-check.ts
- *
- * Or:
- *   zod-decap-local --check --root . --from ./src/lib/schemas.ts
+ *   zod-decap-local --check --root .
+ *   zod-decap-local --root . --content-config ./src/content.config.ts
  */
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { type CollectionSpec, writeDecapConfig } from "./codegen";
+import { emitFromContentConfig } from "./emit";
 
 function argValue(flag: string): string | undefined {
 	const idx = process.argv.indexOf(flag);
@@ -20,37 +16,24 @@ function argValue(flag: string): string | undefined {
 
 const check = process.argv.includes("--check");
 const root = resolve(argValue("--root") ?? process.cwd());
-const from = argValue("--from");
+const contentConfig = argValue("--content-config") ?? argValue("--from");
 
-if (!from) {
-	console.error(
-		"Usage: zod-decap-local [--check] --root <dir> --from <schemas-module>",
-	);
-	console.error(
-		"  schemas-module must export `collectionSchemas: CollectionSpec[]`",
-	);
+try {
+	const result = await emitFromContentConfig({
+		root,
+		contentConfig,
+		check,
+		outFile: argValue("--out"),
+		mediaFolder: argValue("--media-folder"),
+		publicFolder: argValue("--public-folder"),
+	});
+	if (result.wrote) {
+		console.log(`Wrote config.yml under ${root}`);
+	} else {
+		console.log("config.yml is up to date");
+	}
+} catch (err) {
+	const msg = err instanceof Error ? err.message : String(err);
+	console.error(msg);
 	process.exit(1);
-}
-
-const mod = await import(pathToFileURL(resolve(root, from)).href);
-const collections = mod.collectionSchemas as CollectionSpec[] | undefined;
-if (!Array.isArray(collections)) {
-	console.error(`${from} must export collectionSchemas array`);
-	process.exit(1);
-}
-
-const result = writeDecapConfig({
-	root,
-	collections,
-	check,
-	outFile: argValue("--out"),
-	mediaFolder: argValue("--media-folder"),
-	publicFolder: argValue("--public-folder"),
-	schemaOwnerHint: argValue("--schema-owner") ?? from.replace(/^\.\//, ""),
-});
-
-if (result.wrote) {
-	console.log(`Wrote config.yml under ${root}`);
-} else {
-	console.log("config.yml is up to date");
 }
